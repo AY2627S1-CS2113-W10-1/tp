@@ -81,6 +81,17 @@ public class DateUtil {
     }
 
     /**
+     * Returns the given month in the format MM-YYYY, the same format accepted by {@link #parseMonth(String)},
+     * for use in commands and the storage file.
+     *
+     * @param month Month to format.
+     * @return Formatted month, e.g. "12-2026".
+     */
+    public static String formatMonthForStorage(YearMonth month) {
+        return month.format(MONTH_FORMAT);
+    }
+
+    /**
      * Returns the given month as a short, human-readable string with an abbreviated month name.
      *
      * @param month Month to format.
