@@ -49,7 +49,7 @@ public class Parser {
         case "list":
         case "edit":
         case "delete":
-            // TODO: A - return ExpenseCommandParser.parse(commandWord, args);
+            return ExpenseCommandParser.parse(commandWord, args);
         case "split":
             // TODO: D - return SplitCommandParser.parse(args);
         case "budget":
