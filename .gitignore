@@ -18,3 +18,11 @@ _temp/
 
 /text-ui-test/ACTUAL.TXT
 text-ui-test/EXPECTED-UNIX.TXT
+
+ProjectProposal.md
+UserGuideForCode.md
+*.pdf
+TripJio-huong-dan-code-khung-v2.md
+
+# Data file created when running the app locally
+/data/
