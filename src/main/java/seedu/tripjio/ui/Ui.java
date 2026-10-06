@@ -65,7 +65,7 @@ public class Ui {
      * Prints the goodbye message shown when the application exits.
      */
     public void showGoodbye() {
-        out.println("Bye! Your data has been saved. Safe travels");
+        out.println("Bye! Your data has been saved. Safe travels!");
     }
 
     /**
@@ -86,16 +86,6 @@ public class Ui {
      */
     public void showError(String message) {
         out.println("Error: " + message);
-    }
-
-    /**
-     * Returns the given amount as a dollar string with thousands separators and two decimal places.
-     *
-     * @param amount Amount of money to format.
-     * @return Formatted amount, e.g. "$1,234.50".
-     */
-    public static String formatMoney(double amount) {
-        return String.format("$%,.2f", amount);
     }
 
 }

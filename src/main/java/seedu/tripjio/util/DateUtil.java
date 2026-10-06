@@ -38,7 +38,7 @@ public class DateUtil {
      */
     public static LocalDate parseDate(String text) throws TripJioException {
         try {
-            return LocalDate.parse(text, DATE_FORMAT);
+            return LocalDate.parse(text.trim(), DATE_FORMAT);
 
         } catch (DateTimeParseException e) {
             throw new TripJioException("Invalid date: " + text + ". Use DD-MM-YYYY, e.g. 01-09-2026.");
@@ -54,7 +54,7 @@ public class DateUtil {
      */
     public static YearMonth parseMonth(String text) throws TripJioException {
         try {
-            return YearMonth.parse(text, MONTH_FORMAT);
+            return YearMonth.parse(text.trim(), MONTH_FORMAT);
         } catch (DateTimeParseException e) {
             throw new TripJioException("Invalid month: " + text + ". Use MM-YYYY, e.g. 10-2026.");
         }
