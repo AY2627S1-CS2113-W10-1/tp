@@ -31,6 +31,16 @@ public class MoneyUtil {
     }
 
     /**
+     * Rounds the given amount to the nearest cent (2 decimal places), e.g. 33.333... becomes 33.33.
+     *
+     * @param amount Amount to round.
+     * @return Rounded amount.
+     */
+    public static double roundToCents(double amount) {
+        return Math.round(amount * 100) / 100.0;
+    }
+
+    /**
      * Returns the given amount for showing to the user, with a dollar sign, thousands separators
      * and two decimal places.
      *
