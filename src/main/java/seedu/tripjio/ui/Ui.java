@@ -1,4 +1,4 @@
-package ui;
+package seedu.tripjio.ui;
 
 import java.io.InputStream;
 import java.io.PrintStream;

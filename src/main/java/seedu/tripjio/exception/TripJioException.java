@@ -1,4 +1,4 @@
-package exception;
+package seedu.tripjio.exception;
 
 public class TripJioException extends Exception {
     public TripJioException(String message) {

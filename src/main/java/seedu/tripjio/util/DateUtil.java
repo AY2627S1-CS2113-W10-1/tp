@@ -1,6 +1,6 @@
-package util;
+package seedu.tripjio.util;
 
-import exception.TripJioException;
+import seedu.tripjio.exception.TripJioException;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
