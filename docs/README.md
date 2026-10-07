@@ -1,6 +1,6 @@
-# Duke
+# TripJio
 
-{Give product intro here}
+TripJio is a budget tracker and travel app for students.
 
 Useful links:
 * [User Guide](UserGuide.md)
