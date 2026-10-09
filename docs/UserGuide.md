@@ -13,6 +13,21 @@
 
 ## Features 
 
+### Setting trip dates: `trip set`
+
+Format: `trip set s/START_DATE e/END_DATE`
+
+Example: `trip set s/10-12-2026 e/24-12-2026`
+
+Dates must be valid calendar dates in `DD-MM-YYYY` format. Both parameters are required
+exactly once and can appear in either order. The end date must be on or after the start
+date; same-day trips and past or future trips are also allowed. 
+
+A successful command replaces the current trip dates and automatically saves them to
+`data/tripjio.txt`. They are restored on the next launch. Invalid commands leave the
+existing trip unchanged. If saving fails, an error is displayed; the change remains in
+memory but may not survive restarting until a later save succeeds.
+
 {Give detailed description of each feature}
 
 ### Adding a todo: `todo`
