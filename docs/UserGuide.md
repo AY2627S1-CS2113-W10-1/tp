@@ -13,6 +13,40 @@
 
 ## Features 
 
+### Monthly spending by category: `stats`
+
+Format: `stats [m/MM-YYYY]`
+
+Examples: `stats` or `stats m/10-2026`.
+
+Without `m/`, the report uses the current month according to the computer's local
+date when the command executes. A specified month must use `MM-YYYY` and can be
+past, present or future. Empty or repeated month parameters, extra parameters and
+extra words are rejected. `stats compare` is not implemented yet.
+
+The report lists Food, Transport, Accommodation, Entertainment, Shopping and Other
+in that order, followed by the total. Amounts are rounded to two decimal places.
+Only expenses in the selected year and month are included, and split bills count
+only your share. All recorded expenses in the month are included, even if future
+dated. A configured trip or budget is not required. Viewing statistics does not
+change or save data.
+
+Unused categories show `$0.00`. If the entire month has no expenses, every category
+and the total show zero, followed by `No expenses recorded for this month.`
+
+```text
+Spending for October 2026:
+Food: $30.30
+Transport: $12.50
+Accommodation: $0.00
+Entertainment: $0.00
+Shopping: $0.00
+Other: $0.00
+==============================
+TOTAL SPENT: $42.80
+==============================
+```
+
 ### Viewing the current trip: `trip status`
 
 Format: `trip status` (no parameters).

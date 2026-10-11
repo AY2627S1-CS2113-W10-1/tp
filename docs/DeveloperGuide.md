@@ -6,6 +6,22 @@
 
 ## Design & implementation
 
+### Monthly statistics
+
+`Parser` delegates `stats` to `StatsCommandParser`. It uses `ArgumentParser` to
+reject extra or repeated parameters and `DateUtil.parseMonth` for strict month
+validation. `StatsCommand` extends `Command` and inherits its read-only behaviour.
+Its optional injected `Clock` makes default-month tests deterministic; an explicit
+month overrides that clock.
+
+`Statistics.getMonthlyTotals` filters through `ExpenseList.getExpensesInMonth` and
+returns a fresh `EnumMap<Category, Double>` containing every category. It totals
+`Expense.getAmount()` so split bills contribute the user's share, then rounds each
+category to cents. `StatsCommand` formats the results using the shared money and
+date utilities and sums the displayed category amounts for a consistent grand total.
+Calculations are separate from parsing and display, ready for reuse by comparison
+commands. `stats compare` remains unimplemented.
+
 ### Trip status
 
 `TripCommandParser` accepts `status` without arguments and creates a `TripStatusCommand`.
@@ -36,7 +52,7 @@ the common `Command` abstraction. No separate exception hierarchy is needed.
 `Storage` designates the `[trip]` section to `Trip`. Trip dates are formatted
 as `start=DD-MM-YYYY` and `end=DD-MM-YYYY`. An incomplete loaded pair remains unset;
 a reversed loaded pair is cleared and reported through the existing load warning.
-The statistics commands remain unimplemented; trip status is described above.
+Monthly statistics and trip status are described above; statistics comparison remains unimplemented.
 
 {Describe the design and implementation of the product. Use UML diagrams and short code snippets where applicable.}
 
