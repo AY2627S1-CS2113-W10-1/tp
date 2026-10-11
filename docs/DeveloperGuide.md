@@ -6,6 +6,19 @@
 
 ## Design & implementation
 
+### Trip status
+
+`TripCommandParser` accepts `status` without arguments and creates a `TripStatusCommand`.
+The command extends `Command` and inherits its non-mutating behaviour, so the main loop
+does not save data or check budget warnings. It obtains dates and lifecycle calculations
+from `Trip`, spending from `ExpenseList.getTotalSpentBetween`, and prints through `Ui`.
+`Trip` rejects calculations on an unset trip with `TripJioException` before any output.
+
+Inclusive day counts use `ChronoUnit.DAYS`. `TripStatusCommand` receives a `Clock` through
+an overloaded constructor; production uses the local system clock and tests use a fixed
+clock. This keeps boundary tests reproducible without hard-coding today's date. Expenses
+are summed via `getAmount()`, preserving polymorphic support for the user's split-bill share.
+
 ### Trip date configuration
 
 `Parser` appoints `trip` input to `TripCommandParser`, which checks the `set`
@@ -23,7 +36,7 @@ the common `Command` abstraction. No separate exception hierarchy is needed.
 `Storage` designates the `[trip]` section to `Trip`. Trip dates are formatted
 as `start=DD-MM-YYYY` and `end=DD-MM-YYYY`. An incomplete loaded pair remains unset;
 a reversed loaded pair is cleared and reported through the existing load warning.
-The status and statistics commands are not implemented in this increment.
+The statistics commands remain unimplemented; trip status is described above.
 
 {Describe the design and implementation of the product. Use UML diagrams and short code snippets where applicable.}
 

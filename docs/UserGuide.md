@@ -13,6 +13,31 @@
 
 ## Features 
 
+### Viewing the current trip: `trip status`
+
+Format: `trip status` (no parameters).
+
+Shows the configured dates, status (Upcoming, Ongoing or Completed), inclusive trip
+duration, remaining trip days, and recorded spending between the start and end dates.
+Before departure, remaining days equals the full duration. During the trip it includes
+today; after the end date it is zero. A same-day trip lasts one day. The computer's
+local date determines the status.
+
+Spending includes expenses on both boundary dates and counts only your share of split
+bills. It totals all recorded expenses within the trip dates, including future-dated
+records loaded from a manually edited file. No expenses produces `$0.00`. This command
+does not change or save data. If no complete trip is set, it asks you to use `trip set`.
+
+Example output for `trip status` on 11 December 2026:
+
+```text
+Trip: 10-12-2026 to 12-12-2026
+Status: Ongoing
+Duration: 3 day(s)
+Remaining trip days (including today): 2
+Recorded spending during trip: $60.30
+```
+
 ### Setting trip dates: `trip set`
 
 Format: `trip set s/START_DATE e/END_DATE`
