@@ -4,6 +4,7 @@ import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -62,6 +63,55 @@ public class Trip {
 
     public LocalDate getEnd() {
         return end;
+    }
+
+    /**
+     * Returns the trip duration including both the first and last days.
+     *
+     * @return Number of days in the trip.
+     * @throws TripJioException If no complete trip has been set.
+     */
+    public long getDurationDays() throws TripJioException {
+        requireSet();
+        return ChronoUnit.DAYS.between(start, end) + 1;
+    }
+
+    /**
+     * Returns remaining trip days including today, capped at the trip duration before departure.
+     *
+     * @param today Date on which the status is requested.
+     * @return Zero after the trip ends; otherwise the remaining number of trip days.
+     * @throws TripJioException If no complete trip has been set.
+     */
+    public long getRemainingDays(LocalDate today) throws TripJioException {
+        requireSet();
+        if (today.isAfter(end)) {
+            return 0;
+        }
+        LocalDate firstRemainingDay = today.isBefore(start) ? start : today;
+        return ChronoUnit.DAYS.between(firstRemainingDay, end) + 1;
+    }
+
+    /**
+     * Determines the trip's phase relative to a supplied date.
+     *
+     * @param today Date on which the status is requested.
+     * @return Upcoming, ongoing or completed status text.
+     * @throws TripJioException If no complete trip has been set.
+     */
+    public String getStatus(LocalDate today) throws TripJioException {
+        requireSet();
+        if (today.isBefore(start)) {
+            return "Upcoming";
+        }
+        return today.isAfter(end) ? "Completed" : "Ongoing";
+    }
+
+    /** Rejects status calculations until both dates have been configured. */
+    private void requireSet() throws TripJioException {
+        if (!isSet()) {
+            throw new TripJioException("No trip set. Use: trip set s/START_DATE e/END_DATE.");
+        }
     }
 
     /**
