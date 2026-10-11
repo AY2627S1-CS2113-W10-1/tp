@@ -52,7 +52,7 @@ class TripSetCommandTest {
         LocalDate original = LocalDate.of(2026, 12, 1);
         state.getTrip().set(original, original);
         String[] inputs = {
-            "trip", "trip set", "trip status", "trip set extra s/01-12-2026 e/02-12-2026",
+            "trip", "trip set", "trip unknown", "trip set extra s/01-12-2026 e/02-12-2026",
             "trip set s/01-12-2026", "trip set e/02-12-2026", "trip set s/ e/02-12-2026",
             "trip set s/01-12-2026 e/", "trip set s/31-02-2026 e/02-03-2026",
             "trip set s/2026-12-01 e/02-12-2026", "trip set s/03-12-2026 e/02-12-2026",
