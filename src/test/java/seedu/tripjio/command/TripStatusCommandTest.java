@@ -44,9 +44,9 @@ class TripStatusCommandTest {
     }
 
     @Test
-    void parse_extraArgumentsAndOtherCommands_rejected() {
+    void parse_extraStatusArguments_rejected() {
         for (String input : new String[] {"trip status s/01-12-2026", "trip status extra",
-            "trip status x/unknown", "trip status m/12-2026", "budget status", "split status", "stats"}) {
+            "trip status x/unknown", "trip status m/12-2026"}) {
             assertThrows(TripJioException.class, () -> Parser.parse(input), input);
         }
     }

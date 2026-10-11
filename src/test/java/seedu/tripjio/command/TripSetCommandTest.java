@@ -94,9 +94,7 @@ class TripSetCommandTest {
     }
 
     @Test
-    void otherUnimplementedCommands_remainUnavailable() {
-        for (String input : new String[] {"budget set", "split", "stats"}) {
-            assertThrows(TripJioException.class, () -> Parser.parse(input));
-        }
+    void parse_unknownTripSubcommand_throws() {
+        assertThrows(TripJioException.class, () -> Parser.parse("trip unknown"));
     }
 }
