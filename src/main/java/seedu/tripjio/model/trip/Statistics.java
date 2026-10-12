@@ -39,5 +39,4 @@ public class Statistics {
         return totals;
     }
 
-    // TODO: C - compare two months
 }
