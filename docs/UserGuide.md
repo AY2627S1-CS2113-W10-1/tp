@@ -24,7 +24,7 @@ date when the command executes. A specified month must use `MM-YYYY` and can be
 past, present or future. Empty or repeated month parameters, extra parameters and
 extra words are rejected. To compare two months, use `stats compare` below.
 
-The report lists Food, Transport, Accommodation, Entertainment, Shopping and Other
+The report lists; Food, Transport, Accommodation, Entertainment, Shopping and Other
 in that order, followed by the total. Amounts are rounded to two decimal places.
 Only expenses in the selected year and month are included, and split bills count
 only your share. All recorded expenses in the month are included, even if future
@@ -53,15 +53,15 @@ Format: `stats compare m/MM-YYYY m/MM-YYYY`
 
 Example: `stats compare m/09-2026 m/10-2026`.
 
-Exactly two valid, non-empty months are required. Extra parameters, extra words
-and additional months are rejected. The first month is the baseline; the second
+Input : Exactly two valid months are required and extra parameters, extra words
+and additional months are rejected. The first month is the base; the second
 is compared against it, even if it is earlier. The same month is allowed and gives
-zero change. Months may be past, present or future.
+zero change for foolproof comparisons. [Months may be past, present or future.]
 
 All six categories show the first amount, second amount and dollar change
 (second minus first). `+` means spending increased, `-` means it decreased, and
 `$0.00` means no change. Only your share of split bills is counted. Missing expenses
-show zero, not an error. If both months are empty, an additional message says so.
+show zero, not an error. If both months are empty, an additional message/exception will be triggered.
 The highlighted `TOTAL SPENT` row sums the displayed categories for each month.
 No trip or budget is required, and the command does not change or save data.
 
@@ -76,7 +76,7 @@ Transport: $12.50 -> $0.00 (change: -$12.50)
 
 Format: `trip status` (no parameters).
 
-Shows the configured dates, status (Upcoming, Ongoing or Completed), inclusive trip
+Shows the configured dates, status (Upcoming, Ongoing or Completed), trip
 duration, remaining trip days, and recorded spending between the start and end dates.
 Before departure, remaining days equals the full duration. During the trip it includes
 today; after the end date it is zero. A same-day trip lasts one day. [The computer's
