@@ -49,7 +49,7 @@ class StatsCommandTest {
         for (String input : new String[] {"stats m/", "stats m/13-2026", "stats m/00-2026",
             "stats m/2-2026", "stats m/2026-02", "stats m/02-2026 m/03-2026",
             "stats m/02-2026 trailing", "stats c/food", "stats m/02-2026 a/10",
-            "stats x/unknown", "stats m/02-2026 x/unknown", "stats compare m/01-2026 m/02-2026"}) {
+            "stats x/unknown", "stats m/02-2026 x/unknown", "stats unknown m/01-2026 m/02-2026"}) {
             assertThrows(TripJioException.class, () -> Parser.parse(input), input);
         }
         assertEquals("", output.toString());
