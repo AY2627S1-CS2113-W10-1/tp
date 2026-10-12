@@ -22,7 +22,7 @@ Examples: `stats` or `stats m/10-2026`.
 Without `m/`, the report uses the current month according to the computer's local
 date when the command executes. A specified month must use `MM-YYYY` and can be
 past, present or future. Empty or repeated month parameters, extra parameters and
-extra words are rejected. `stats compare` is not implemented yet.
+extra words are rejected. To compare two months, use `stats compare` below.
 
 The report lists Food, Transport, Accommodation, Entertainment, Shopping and Other
 in that order, followed by the total. Amounts are rounded to two decimal places.
@@ -47,6 +47,31 @@ TOTAL SPENT: $42.80
 ==============================
 ```
 
+### Comparing monthly spending: `stats compare`
+
+Format: `stats compare m/MM-YYYY m/MM-YYYY`
+
+Example: `stats compare m/09-2026 m/10-2026`.
+
+Exactly two valid, non-empty months are required. Extra parameters, extra words
+and additional months are rejected. The first month is the baseline; the second
+is compared against it, even if it is earlier. The same month is allowed and gives
+zero change. Months may be past, present or future.
+
+All six categories show the first amount, second amount and dollar change
+(second minus first). `+` means spending increased, `-` means it decreased, and
+`$0.00` means no change. Only your share of split bills is counted. Missing expenses
+show zero, not an error. If both months are empty, an additional message says so.
+The highlighted `TOTAL SPENT` row sums the displayed categories for each month.
+No trip or budget is required, and the command does not change or save data.
+
+Example rows:
+
+```text
+Food: $10.10 -> $30.20 (change: +$20.10)
+Transport: $12.50 -> $0.00 (change: -$12.50)
+```
+
 ### Viewing the current trip: `trip status`
 
 Format: `trip status` (no parameters).
@@ -54,8 +79,8 @@ Format: `trip status` (no parameters).
 Shows the configured dates, status (Upcoming, Ongoing or Completed), inclusive trip
 duration, remaining trip days, and recorded spending between the start and end dates.
 Before departure, remaining days equals the full duration. During the trip it includes
-today; after the end date it is zero. A same-day trip lasts one day. The computer's
-local date determines the status.
+today; after the end date it is zero. A same-day trip lasts one day. [The computer's
+local date determines the status.]
 
 Spending includes expenses on both boundary dates and counts only your share of split
 bills. It totals all recorded expenses within the trip dates, including future-dated

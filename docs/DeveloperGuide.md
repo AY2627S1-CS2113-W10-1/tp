@@ -19,8 +19,20 @@ returns a fresh `EnumMap<Category, Double>` containing every category. It totals
 `Expense.getAmount()` so split bills contribute the user's share, then rounds each
 category to cents. `StatsCommand` formats the results using the shared money and
 date utilities and sums the displayed category amounts for a consistent grand total.
-Calculations are separate from parsing and display, ready for reuse by comparison
-commands. `stats compare` remains unimplemented.
+Calculations are separate from parsing and display and reused by `StatsCompareCommand`.
+
+For `stats compare`, `StatsCommandParser` recognises the case-insensitive `compare`
+preamble and uses `ArgumentParser.getAll("m")` to require exactly two months in input
+order. Both are validated before constructing the command. Other parameters and
+unexpected text are rejected without changing the shared argument parser.
+
+`StatsCompareCommand` extends `Command` with its default read-only behaviour and
+encapsulates two non-null `YearMonth` values. It obtains two fresh category maps from
+`Statistics.getMonthlyTotals`, then displays their values and cent-rounded changes
+(second minus first). Totals sum the displayed category amounts. Equal or reversed
+months are valid; empty months yield zeros. No percentage calculation is needed, so
+a zero baseline has no division-by-zero case. Expense polymorphism preserves split
+shares without changes to split, budget or storage code.
 
 ### Trip status
 
@@ -52,7 +64,7 @@ the common `Command` abstraction. No separate exception hierarchy is needed.
 `Storage` designates the `[trip]` section to `Trip`. Trip dates are formatted
 as `start=DD-MM-YYYY` and `end=DD-MM-YYYY`. An incomplete loaded pair remains unset;
 a reversed loaded pair is cleared and reported through the existing load warning.
-Monthly statistics and trip status are described above; statistics comparison remains unimplemented.
+Monthly statistics, comparisons and trip status are described above.
 
 {Describe the design and implementation of the product. Use UML diagrams and short code snippets where applicable.}
 
