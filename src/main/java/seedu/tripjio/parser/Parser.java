@@ -53,7 +53,7 @@ public class Parser {
         case "split":
             // TODO: D - return SplitCommandParser.parse(args);
         case "budget":
-            // TODO: B - return BudgetCommandParser.parse(args);
+            return BudgetCommandParser.parse(args);
         case "trip":
         case "stats":
             // TODO: C - return TripCommandParser.parse(commandWord, args);

@@ -1,7 +1,9 @@
 package seedu.tripjio.parser;
 
+import seedu.tripjio.command.BudgetStatusCommand;
 import seedu.tripjio.command.ExitCommand;
 import seedu.tripjio.command.HelpCommand;
+import seedu.tripjio.command.SetBudgetCommand;
 import seedu.tripjio.exception.TripJioException;
 
 import org.junit.jupiter.api.Test;
@@ -39,5 +41,11 @@ class ParserTest {
     void parse_unknownCommand_throws() {
         TripJioException e = assertThrows(TripJioException.class, () -> Parser.parse("abc"));
         assertEquals("Unknown command: abc. Type help to see all commands.", e.getMessage());
+    }
+
+    @Test
+    void parse_budgetCommand_returnsBudgetCommand() throws TripJioException {
+        assertInstanceOf(SetBudgetCommand.class, Parser.parse("budget set a/1000"));
+        assertInstanceOf(BudgetStatusCommand.class, Parser.parse("budget status"));
     }
 }
