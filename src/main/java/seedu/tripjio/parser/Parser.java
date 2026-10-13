@@ -54,8 +54,7 @@ public class Parser {
             // TODO: D - return SplitCommandParser.parse(args);
             throw new TripJioException("This command is not available yet.");
         case "budget":
-            // TODO: B - return BudgetCommandParser.parse(args);
-            throw new TripJioException("This command is not available yet.");
+            return BudgetCommandParser.parse(args);
         case "trip":
             return TripCommandParser.parse(args);
         case "stats":
