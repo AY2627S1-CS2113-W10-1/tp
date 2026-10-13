@@ -3,6 +3,7 @@ package seedu.tripjio.model.split;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.expense.Expense;
+import seedu.tripjio.util.DateUtil;
 import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
@@ -22,6 +23,8 @@ import java.time.LocalDate;
  * </ul>
  */
 public class SplitExpense extends Expense {
+    private static final double EPSILON = 1e-4;
+
     private double totalAmount;
     private final int numberOfPeople;
     private final boolean hasCustomShare;
@@ -85,21 +88,108 @@ public class SplitExpense extends Expense {
     }
 
     /**
+     * Updates the full bill and recalculates the user's personal share per the agreed split rules.
+     *
+     * @param newTotal The new total amount of the full group bill.
+     * @throws TripJioException If the new total is invalid, if the recalculation results in a share
+     *                          below $0.01, or if a custom share exceeds the new total bill.
+     */
+    @Override
+    public void setAmount(double newTotal) throws TripJioException {
+        MoneyUtil.validateAmount(newTotal);
+
+        if (hasCustomShare) {
+            if (newTotal < getMyShare()) {
+                throw new TripJioException("The new total bill cannot be less than your own share of "
+                        + MoneyUtil.format(getMyShare()) + ".");
+            }
+            this.totalAmount = newTotal;
+        } else {
+            double newShare = calculateEqualShare(newTotal, numberOfPeople);
+            if (newShare < 0.01) {
+                throw new TripJioException("Each person's share must be at least $0.01.");
+            }
+            this.totalAmount = newTotal;
+            super.setAmount(newShare);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + " [Split: " + MoneyUtil.format(totalAmount) + " / "
+                + numberOfPeople + " people]";
+    }
+
+    @Override
+    public String toStorageString() {
+        return "S|" + getDescription() + "|" + MoneyUtil.toStorageString(totalAmount) + "|"
+                + numberOfPeople + "|" + MoneyUtil.toStorageString(getMyShare()) + "|"
+                + getCategory().name() + "|" + DateUtil.formatDate(getDate());
+    }
+
+    /**
      * Creates a split expense from one line of the storage file,
      * e.g. {@code S|Group dinner|90.00|3|30.00|FOOD|14-10-2026}.
-     * Not implemented yet: it currently always throws an exception.
      *
      * @param line Line from the storage file.
      * @return Split expense described by the line.
-     * @throws TripJioException Always, until loading split expenses is implemented.
+     * @throws TripJioException If any field is corrupted, out of range, or fails validation.
      */
     public static SplitExpense fromStorageString(String line) throws TripJioException {
-        // TODO: D - parse and validate every field like Expense.fromStorageString does.
-        //  The line has no separate flag for a custom share: treat the share as custom when it differs from
-        //  calculateEqualShare(total, people), so the storage format in the User Guide stays unchanged.
-        throw new TripJioException("Split expenses cannot be loaded yet.");
-    }
+        if (line == null) {
+            throw new TripJioException("Storage line cannot be null.");
+        }
 
-    // TODO: D - override setAmount (follow the rules in the class comment; update totalAmount and,
-    //  for an equal split, call super.setAmount with the new share), toString and toStorageString.
+        String[] parts = line.split("\\|", -1);
+        if (parts.length != 7 || !parts[0].equals("S")) {
+            throw new TripJioException("Invalid split expense storage line: " + line);
+        }
+
+        String description = parts[1].trim();
+        if (description.isEmpty() || description.contains("/")) {
+            throw new TripJioException("Invalid description in storage: " + parts[1]);
+        }
+
+        double total;
+        try {
+            total = Double.parseDouble(parts[2]);
+            MoneyUtil.validateAmount(total);
+        } catch (NumberFormatException e) {
+            throw new TripJioException("Invalid total amount in storage: " + parts[2]);
+        }
+
+        int people;
+        try {
+            people = Integer.parseInt(parts[3]);
+            if (people < 2 || people > 50) {
+                throw new TripJioException("Number of people must be between 2 and 50.");
+            }
+        } catch (NumberFormatException e) {
+            throw new TripJioException("Invalid number of people in storage: " + parts[3]);
+        }
+
+        double myShare;
+        try {
+            myShare = Double.parseDouble(parts[4]);
+            MoneyUtil.validateAmount(myShare);
+        } catch (NumberFormatException e) {
+            throw new TripJioException("Invalid share amount in storage: " + parts[4]);
+        }
+
+        if (myShare > total) {
+            throw new TripJioException("User's share cannot exceed the total bill.");
+        }
+
+        Category category = Category.fromString(parts[5]);
+        LocalDate date = DateUtil.parseDate(parts[6]);
+
+        double equalShare = calculateEqualShare(total, people);
+        if (equalShare < 0.01 && Math.abs(myShare - equalShare) < EPSILON) {
+            throw new TripJioException("Each person's share must be at least $0.01.");
+        }
+
+        Double customShare = (Math.abs(myShare - equalShare) < EPSILON) ? null : myShare;
+
+        return new SplitExpense(description, total, people, customShare, category, date);
+    }
 }
