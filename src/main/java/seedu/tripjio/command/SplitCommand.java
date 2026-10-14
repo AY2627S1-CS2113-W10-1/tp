@@ -9,6 +9,9 @@ import seedu.tripjio.ui.Ui;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
+/**
+ * Adds a split expense shared among multiple people to the expense list.
+ */
 public class SplitCommand extends Command {
     private final String description;
     private final double totalAmount;
@@ -16,8 +19,7 @@ public class SplitCommand extends Command {
     private final Double customShare;
     private final Category category;
     private final LocalDate date;
-    
-    private YearMonth affectedMonth;
+    private final YearMonth affectedMonth;
 
     public SplitCommand(String description, double totalAmount, int numberOfPeople,
                         Double customShare, Category category, LocalDate date) {
@@ -27,23 +29,21 @@ public class SplitCommand extends Command {
         this.customShare = customShare;
         this.category = category;
         this.date = date;
+        this.affectedMonth = YearMonth.from(date);
     }
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
-        SplitExpense expense = new SplitExpense(description, totalAmount, numberOfPeople, 
-                                                customShare, category, date);
+        SplitExpense expense = new SplitExpense(description, totalAmount, numberOfPeople,
+                customShare, category, date);
         state.getExpenses().add(expense);
-        
-        affectedMonth = expense.getMonth();
 
-        ui.showMessage("Got it. I've added this split expense:\n  " + expense 
-                + "\nNow you have " + state.getExpenses().size() + " expenses in the list.");
-    }
+        int count = state.getExpenses().size();
+        String expenseWord = (count == 1) ? "expense" : "expenses";
 
-    @Override
-    public boolean isExit() {
-        return false;
+        ui.showMessage("Got it. I've added this split expense:",
+                "  " + expense,
+                "Now you have " + count + " " + expenseWord + " in the list.");
     }
 
     @Override

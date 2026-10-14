@@ -10,6 +10,9 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Lists all split expenses, optionally filtered by a specific month.
+ */
 public class SplitListCommand extends Command {
     private final YearMonth month;
 
@@ -47,26 +50,12 @@ public class SplitListCommand extends Command {
             return;
         }
 
-        StringBuilder sb = new StringBuilder("Here are your split expenses:\n");
+        List<String> messages = new ArrayList<>();
+        messages.add("Here are your split expenses:");
         for (int i = 0; i < splitExpenses.size(); i++) {
-            sb.append(actualIndexes.get(i)).append(". ").append(splitExpenses.get(i)).append("\n");
+            messages.add(actualIndexes.get(i) + ". " + splitExpenses.get(i));
         }
-        
-        ui.showMessage(sb.toString().trim());
-    }
 
-    @Override
-    public boolean isExit() {
-        return false;
-    }
-
-    @Override
-    public boolean isMutating() {
-        return false; 
-    }
-
-    @Override
-    public YearMonth getAffectedMonth() {
-        return null; 
+        ui.showMessage(messages.toArray(new String[0]));
     }
 }
