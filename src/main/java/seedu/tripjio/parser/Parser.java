@@ -51,8 +51,7 @@ public class Parser {
         case "delete":
             return ExpenseCommandParser.parse(commandWord, args);
         case "split":
-            // TODO: D - return SplitCommandParser.parse(args);
-            throw new TripJioException("This command is not available yet.");
+            return SplitCommandParser.parse(args);
         case "budget":
             return BudgetCommandParser.parse(args);
         case "trip":
