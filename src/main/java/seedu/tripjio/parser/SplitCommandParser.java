@@ -27,11 +27,7 @@ public class SplitCommandParser {
 
         String description = ArgumentParser.parseDescription(p.getRequired("d"));
         double amount = ArgumentParser.parseAmount(p.getRequired("a"));
-        int people = ArgumentParser.parseIndex(p.getRequired("n"));
-
-        if (people < 2 || people > 50) {
-            throw new TripJioException("Number of people must be between 2 and 50.");
-        }
+        int people = parseNumberOfPeople(p.getRequired("n"));
 
         Double myShare = null;
         if (p.has("my")) {
@@ -60,5 +56,17 @@ public class SplitCommandParser {
         }
 
         return new SplitCommand(description, amount, people, myShare, category, date);
+    }
+
+    private static int parseNumberOfPeople(String text) throws TripJioException {
+        try {
+            int people = Integer.parseInt(text.trim());
+            if (people >= 2 && people <= 50) {
+                return people;
+            }
+        } catch (NumberFormatException e) {
+            // Fall through to throw exception below
+        }
+        throw new TripJioException("Number of people must be between 2 and 50.");
     }
 }
