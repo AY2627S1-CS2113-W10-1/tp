@@ -53,11 +53,11 @@ public class Parser {
         case "split":
             return SplitCommandParser.parse(args);
         case "budget":
-            // TODO: B - return BudgetCommandParser.parse(args);
+            return BudgetCommandParser.parse(args);
         case "trip":
+            return TripCommandParser.parse(args);
         case "stats":
-            // TODO: C - return TripCommandParser.parse(commandWord, args);
-            throw new TripJioException("This command is not available yet.");
+            return StatsCommandParser.parse(args);
         default:
             throw new TripJioException("Unknown command: " + commandWord + ". Type help to see all commands.");
         }
