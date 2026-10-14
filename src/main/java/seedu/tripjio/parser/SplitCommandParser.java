@@ -9,14 +9,18 @@ import seedu.tripjio.util.DateUtil;
 import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 public class SplitCommandParser {
 
     public static Command parse(String args) throws TripJioException {
         ArgumentParser p = new ArgumentParser(args);
         
+        // Handle "split list [m/MONTH]"
         if ("list".equals(p.getPreamble())) {
-            return new SplitListCommand();
+            String monthText = p.getOptional("m");
+            YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);
+            return new SplitListCommand(month);
         }
 
         p.checkNoPreamble();

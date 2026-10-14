@@ -44,4 +44,10 @@ public class SplitCommandParserTest {
     public void parse_equalShareTooSmall_throwsException() {
         assertThrows(TripJioException.class, () -> SplitCommandParser.parse("d/Candy a/0.05 n/50"));
     }
+
+    @Test
+    public void parse_listCommandWithMonth_returnsSplitListCommand() throws TripJioException {
+        Command command = SplitCommandParser.parse("list m/09-2026");
+        assertTrue(command instanceof SplitListCommand);
+    }
 }

@@ -11,6 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SplitListCommand extends Command {
+    private final YearMonth month;
+
+    public SplitListCommand() {
+        this(null);
+    }
+
+    public SplitListCommand(YearMonth month) {
+        this.month = month;
+    }
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
@@ -19,14 +28,22 @@ public class SplitListCommand extends Command {
         List<Integer> actualIndexes = new ArrayList<>();
 
         for (int i = 0; i < allExpenses.size(); i++) {
-            if (allExpenses.get(i) instanceof SplitExpense) {
-                splitExpenses.add((SplitExpense) allExpenses.get(i));
-                actualIndexes.add(i + 1);
+            Expense expense = allExpenses.get(i);
+            if (expense instanceof SplitExpense) {
+                SplitExpense splitExpense = (SplitExpense) expense;
+                if (month == null || splitExpense.getMonth().equals(month)) {
+                    splitExpenses.add(splitExpense);
+                    actualIndexes.add(i + 1);
+                }
             }
         }
 
         if (splitExpenses.isEmpty()) {
-            ui.showMessage("You have no split expenses yet.");
+            if (month != null) {
+                ui.showMessage("No split expenses match the given filter.");
+            } else {
+                ui.showMessage("You have no split expenses yet.");
+            }
             return;
         }
 
