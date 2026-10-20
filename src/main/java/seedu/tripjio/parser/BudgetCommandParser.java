@@ -43,6 +43,7 @@ public class BudgetCommandParser {
     }
 
     private static Command parseSet(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("a", "m");
         double amount = ArgumentParser.parseAmount(argParser.getRequired("a"));
         String monthText = argParser.getOptional("m");
         YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);
@@ -51,6 +52,7 @@ public class BudgetCommandParser {
     }
 
     private static Command parseStatus(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("m");
         String monthText = argParser.getOptional("m");
         YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);
 

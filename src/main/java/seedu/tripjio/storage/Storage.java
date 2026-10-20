@@ -5,6 +5,7 @@ import seedu.tripjio.model.AppState;
 import seedu.tripjio.model.budget.Budget;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.expense.ExpenseList;
+import seedu.tripjio.model.expense.ForeignExpense;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.ui.Ui;
@@ -26,6 +27,7 @@ public class Storage {
     private static final String EXPENSE_HEADER = "[expense]";
     private static final String BUDGET_HEADER = "[budget]";
     private static final String TRIP_HEADER = "[trip]";
+    private static final String RATES_HEADER = "[rates]";
 
     /** Start of an expense line for a normal expense, e.g. "E|Lunch|12.50|FOOD|15-10-2026". */
     private static final String EXPENSE_TAG = "E|";
@@ -68,6 +70,7 @@ public class Storage {
         ExpenseList expenses = new ExpenseList();
         Budget budget = new Budget();
         Trip trip = new Trip();
+        AppState state = new AppState(expenses, budget, trip);
 
         // Header of the block being read, or null before the first header.
         String section = null;
@@ -84,16 +87,21 @@ public class Storage {
             }
 
             try {
-                loadLine(line, section, expenses, budget, trip);
+                if (RATES_HEADER.equals(section)) {
+                    state.getExchangeRates().loadStorageLine(line);
+                } else {
+                    loadLine(line, section, expenses, budget, trip);
+                }
             } catch (TripJioException e) {
                 ui.showError("Skipped invalid line " + lineNumber + " in data file: " + e.getMessage());
             }
         }
-        return new AppState(expenses, budget, trip);
+        return state;
     }
 
     private static boolean isHeader(String line) {
-        return line.equals(EXPENSE_HEADER) || line.equals(BUDGET_HEADER) || line.equals(TRIP_HEADER);
+        return line.equals(EXPENSE_HEADER) || line.equals(BUDGET_HEADER) || line.equals(TRIP_HEADER)
+                || line.equals(RATES_HEADER);
     }
 
     /**
@@ -113,8 +121,10 @@ public class Storage {
                 expenses.add(Expense.fromStorageString(line));
             } else if (line.startsWith(SPLIT_EXPENSE_TAG)) {
                 expenses.add(SplitExpense.fromStorageString(line));
+            } else if (line.startsWith("F|")) {
+                expenses.add(ForeignExpense.fromStorageString(line));
             } else {
-                throw new TripJioException("Expense lines must start with E| or S|.");
+                throw new TripJioException("Expense lines must start with E|, S| or F|.");
             }
             break;
         case BUDGET_HEADER:
@@ -150,6 +160,12 @@ public class Storage {
 
         lines.add(TRIP_HEADER);
         lines.addAll(state.getTrip().toStorageLines());
+        List<String> rateLines = state.getExchangeRates().toStorageLines();
+        if (!rateLines.isEmpty()) {
+            lines.add("");
+            lines.add(RATES_HEADER);
+            lines.addAll(rateLines);
+        }
 
         try {
             if (filePath.getParent() != null) {

@@ -56,6 +56,8 @@ public class Parser {
             return BudgetCommandParser.parse(args);
         case "trip":
             return TripCommandParser.parse(args);
+        case "rate":
+            return RateCommandParser.parse(args);
         case "stats":
             return StatsCommandParser.parse(args);
         default:

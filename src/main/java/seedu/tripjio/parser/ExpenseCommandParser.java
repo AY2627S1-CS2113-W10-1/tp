@@ -5,6 +5,7 @@ import seedu.tripjio.command.Command;
 import seedu.tripjio.command.DeleteCommand;
 import seedu.tripjio.command.EditCommand;
 import seedu.tripjio.command.ListCommand;
+import seedu.tripjio.command.AddForeignExpenseCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.util.DateUtil;
@@ -47,7 +48,7 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseAdd(ArgumentParser argParser) throws TripJioException {
-        argParser.checkAllowedPrefixes("d", "a", "c", "dt");
+        argParser.checkAllowedPrefixes("d", "a", "c", "dt", "cur");
         argParser.checkNoPreamble();
 
         String description = ArgumentParser.parseDescription(argParser.getRequired("d"));
@@ -59,7 +60,9 @@ public class ExpenseCommandParser {
         String dateText = argParser.getOptional("dt");
         LocalDate date = (dateText == null) ? LocalDate.now() : parseDateNotInFuture(dateText);
 
-        return new AddCommand(description, amount, category, date);
+        String currency = argParser.getOptional("cur");
+        return currency == null ? new AddCommand(description, amount, category, date)
+                : new AddForeignExpenseCommand(description, amount, category, date, currency);
     }
 
     private static Command parseList(ArgumentParser argParser) throws TripJioException {
