@@ -31,8 +31,10 @@ add d/Lunch a/12 c/food dt/10-10-2026 cur/EUR
 The example rate means **1 EUR = 1.45 SGD**, not the reverse. 
 Supply a rate yourself by searching online; these are not live quotes. Rates
 must be positive plain decimals, at most 1000000, with up to eight decimal places.
-Both original and converted expense amounts must be within the existing positive
-amount limit; conversions rounding to zero are rejected.
+Original foreign-currency amounts may exceed 1,000,000. They must be positive,
+finite amounts with at most two decimal places. Only the converted SGD amount is
+capped at SGD 1,000,000.00 (after rounding to cents); conversions rounding to zero
+are rejected. The same rules apply when editing or loading foreign expenses.
 
 The lunch contributes SGD 17.40 to budgets, statistics and trip spending. Its
 original EUR amount and rate are displayed and saved. Updating EUR's rate affects

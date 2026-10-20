@@ -156,11 +156,18 @@ public class ArgumentParser {
      *     or the amount is out of range.
      */
     public static double parseAmount(String text) throws TripJioException {
+        double amount = parseOriginalAmount(text);
+        MoneyUtil.validateAmount(amount);
+        return amount;
+    }
+
+    /** Parses a positive two-decimal amount; its SGD cap is checked after currency conversion. */
+    public static double parseOriginalAmount(String text) throws TripJioException {
         if (!AMOUNT_FORMAT.matcher(text).matches()) {
             throw new TripJioException("Amount must be a positive number with at most 2 decimal places.");
         }
         double amount = Double.parseDouble(text);
-        MoneyUtil.validateAmount(amount);
+        MoneyUtil.validateOriginalAmount(amount);
         return amount;
     }
 

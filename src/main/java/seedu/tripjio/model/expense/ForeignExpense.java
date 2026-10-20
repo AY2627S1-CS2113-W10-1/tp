@@ -28,7 +28,7 @@ public class ForeignExpense extends Expense {
 
     /** Converts once using decimal arithmetic and rounds to SGD cents. */
     private static double convert(double original, BigDecimal rate) throws TripJioException {
-        MoneyUtil.validateAmount(original);
+        MoneyUtil.validateOriginalAmount(original);
         if (rate == null) {
             throw new TripJioException("An exchange rate is required.");
         }
@@ -64,8 +64,18 @@ public class ForeignExpense extends Expense {
         if (fields.length != 7 || !fields[0].equals("F")) {
             throw new TripJioException("Invalid foreign expense line.");
         }
-        Expense original = Expense.fromStorageString(String.join("|", "E", fields[1], fields[2], fields[3], fields[4]));
-        return new ForeignExpense(original.getDescription(), original.getAmount(), original.getCategory(),
-                original.getDate(), fields[5], ExchangeRates.parseRate(fields[6]));
+        if (fields[1].isBlank()) {
+            throw new TripJioException("Missing description in foreign expense line.");
+        }
+        double original;
+        Category category;
+        try {
+            original = Double.parseDouble(fields[2]);
+            category = Category.valueOf(fields[3]);
+        } catch (IllegalArgumentException e) {
+            throw new TripJioException("Invalid amount or category in foreign expense line.");
+        }
+        return new ForeignExpense(fields[1].trim(), original, category, DateUtil.parseDate(fields[4]),
+                fields[5], ExchangeRates.parseRate(fields[6]));
     }
 }

@@ -175,6 +175,47 @@ class TravelFeaturesTest {
     }
 
     @Test
+    void foreignAmountsAboveMillion_addEditAndReloadWithSgdOnlyCap() throws Exception {
+        run("rate set from/JPY to/SGD r/0.009");
+        run("add d/Japan a/2000000 cur/JPY dt/01-01-2020");
+        assertEquals(18000, state.getExpenses().get(1).getAmount());
+        run("edit 1 a/3000000");
+        assertEquals(27000, state.getExpenses().get(1).getAmount());
+        Storage storage = new Storage(tempDir.resolve("large.txt").toString());
+        storage.save(state);
+        AppState loaded = storage.load(ui);
+        assertEquals(27000, loaded.getExpenses().get(1).getAmount());
+        assertTrue(loaded.getExpenses().get(1).toString().contains("JPY 3000000.00"));
+        run("rate set from/JPY to/SGD r/0.5");
+        run("add d/Boundary a/2000000 cur/JPY");
+        assertEquals(1000000, state.getExpenses().get(2).getAmount());
+        assertThrows(TripJioException.class, () -> run("add d/Over a/2000000.02 cur/JPY"));
+        assertThrows(TripJioException.class, () -> run("edit 2 a/2000000.02 d/Changed"));
+        assertEquals("Boundary", state.getExpenses().get(2).getDescription());
+        assertEquals(1000000, state.getExpenses().get(2).getAmount());
+    }
+
+    @Test
+    void sgdCapsAndInvalidForeignAmounts_remainRejected() throws Exception {
+        run("rate set from/JPY to/SGD r/0.009");
+        for (String amount : new String[] {"0", "-1", "NaN", "Infinity", "2000000.001", "9".repeat(400)}) {
+            assertThrows(TripJioException.class, () -> run("add d/Bad a/" + amount + " cur/JPY"));
+        }
+        assertThrows(TripJioException.class, () -> run("add d/Over a/1000000.01"));
+        assertThrows(TripJioException.class, () -> run("add d/Over a/1000000.01 cur/SGD"));
+        run("add d/Normal a/10");
+        assertThrows(TripJioException.class, () -> run("edit 1 a/1000000.01 d/Changed"));
+        assertEquals("Normal", state.getExpenses().get(1).getDescription());
+        run("split d/Shared a/100 n/2");
+        assertThrows(TripJioException.class, () -> run("edit 2 a/1000000.01"));
+        assertEquals(50, state.getExpenses().get(2).getAmount());
+        assertThrows(TripJioException.class, () -> ForeignExpense.fromStorageString(
+                "F|Over|2000000.02|FOOD|01-01-2020|JPY|0.5"));
+        assertThrows(TripJioException.class, () -> ForeignExpense.fromStorageString(
+                "F|Invalid|Infinity|FOOD|01-01-2020|JPY|0.5"));
+    }
+
+    @Test
     void storage_invalidNewRecords_warnAndKeepValidData() throws Exception {
         Path path = tempDir.resolve("invalid.txt");
         Files.writeString(path, "[rates]\nEUR=0\nUSD=1.3\n[trips]\nT|Bad|02-01-2020|01-01-2020\n"

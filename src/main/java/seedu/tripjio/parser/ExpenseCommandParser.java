@@ -52,7 +52,9 @@ public class ExpenseCommandParser {
         argParser.checkNoPreamble();
 
         String description = ArgumentParser.parseDescription(argParser.getRequired("d"));
-        double amount = ArgumentParser.parseAmount(argParser.getRequired("a"));
+        String currency = argParser.getOptional("cur");
+        double amount = currency == null ? ArgumentParser.parseAmount(argParser.getRequired("a"))
+                : ArgumentParser.parseOriginalAmount(argParser.getRequired("a"));
 
         String categoryText = argParser.getOptional("c");
         Category category = (categoryText == null) ? Category.OTHER : Category.fromString(categoryText);
@@ -60,7 +62,6 @@ public class ExpenseCommandParser {
         String dateText = argParser.getOptional("dt");
         LocalDate date = (dateText == null) ? LocalDate.now() : parseDateNotInFuture(dateText);
 
-        String currency = argParser.getOptional("cur");
         return currency == null ? new AddCommand(description, amount, category, date)
                 : new AddForeignExpenseCommand(description, amount, category, date, currency);
     }
@@ -102,7 +103,8 @@ public class ExpenseCommandParser {
         }
 
         String description = (descriptionText == null) ? null : ArgumentParser.parseDescription(descriptionText);
-        Double amount = (amountText == null) ? null : ArgumentParser.parseAmount(amountText);
+        // The target expense determines whether a/ is SGD or an original foreign-currency amount.
+        Double amount = (amountText == null) ? null : ArgumentParser.parseOriginalAmount(amountText);
         Category category = (categoryText == null) ? null : Category.fromString(categoryText);
         LocalDate date = (dateText == null) ? null : parseDateNotInFuture(dateText);
 

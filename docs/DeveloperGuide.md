@@ -10,8 +10,12 @@ checks prevent options such as `cur/` being silently ignored by unrelated comman
 
 `ExchangeRates` stores manually supplied SGD-per-unit decimal rates.
 `ForeignExpense extends Expense` snapshots its original amount, currency and rate,
-and exposes the converted SGD amount to existing consumers. Conversion uses
-`BigDecimal` with half-up cent rounding. Amount edits validate the conversion before
+and exposes the converted SGD amount to existing consumers.
+The original foreign amount has no SGD cap; positivity, finiteness and cent
+precision are validated separately. Add/edit parsing permits large original
+amounts and the expense model applies the SGD cap after conversion. SGD expenses
+and split bills retain their existing model-level amount limits.
+Conversion uses `BigDecimal` with half-up cent rounding. Amount edits validate the conversion before
 mutating either amount; they use the saved rate. Split expenses remain SGD-only.
 The reporting currency is fixed, so existing budgets and historical expenses are
 never silently reinterpreted after a base-currency change.
