@@ -47,6 +47,7 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseAdd(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("d", "a", "c", "dt");
         argParser.checkNoPreamble();
 
         String description = ArgumentParser.parseDescription(argParser.getRequired("d"));
@@ -62,6 +63,7 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseList(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("c", "m", "sort", "order");
         argParser.checkNoPreamble();
 
         // null means "do not filter by this field".
@@ -71,10 +73,19 @@ public class ExpenseCommandParser {
         String monthText = argParser.getOptional("m");
         YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);
 
-        return new ListCommand(category, month);
+        String sort = argParser.getOptional("sort");
+        String order = argParser.getOptional("order");
+        if (sort != null && !sort.equals("amount") && !sort.equals("date")) {
+            throw new TripJioException("Use sort/amount or sort/date.");
+        }
+        if (order != null && (sort == null || (!order.equals("asc") && !order.equals("desc")))) {
+            throw new TripJioException("Use order/asc or order/desc together with sort/amount or sort/date.");
+        }
+        return new ListCommand(category, month, sort, order == null || order.equals("desc"));
     }
 
     private static Command parseEdit(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("d", "a", "c", "dt");
         int index = ArgumentParser.parseIndex(argParser.getPreamble());
 
         // Each field is null when it is not given, meaning "keep the current value".
@@ -96,6 +107,7 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseDelete(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes();
         return new DeleteCommand(ArgumentParser.parseIndex(argParser.getPreamble()));
     }
 

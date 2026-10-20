@@ -25,7 +25,7 @@ public class ArgumentParser {
      * {@code dt} and {@code my} come before {@code d} and {@code m},
      * so that "dt/" is not read as "d/" followed by "t/".
      */
-    private static final Pattern PREFIX = Pattern.compile("(?:^|\\s)(dt|my|d|a|c|m|s|e|n)/");
+    private static final Pattern PREFIX = Pattern.compile("(?:^|\\s)(sort|order|cur|from|to|r|dt|my|d|a|c|m|s|e|n)/");
 
     /** A positive number with at most 2 decimal places, e.g. "12" or "12.50". */
     private static final Pattern AMOUNT_FORMAT = Pattern.compile("^\\d+(\\.\\d{1,2})?$");
@@ -74,6 +74,15 @@ public class ArgumentParser {
 
     public boolean has(String prefix) {
         return values.containsKey(prefix);
+    }
+
+    /** Rejects recognised prefixes that are not supported by the current command. */
+    public void checkAllowedPrefixes(String... allowed) throws TripJioException {
+        for (String prefix : values.keySet()) {
+            if (!List.of(allowed).contains(prefix)) {
+                throw new TripJioException("Unexpected parameter: " + prefix + "/.");
+            }
+        }
     }
 
     /**
