@@ -1,5 +1,36 @@
 # Developer Guide
 
+## Sorting, currencies and multiple trips
+
+`ListCommand` sorts a temporary list of original expense indexes using a comparator.
+Amount comparisons call the polymorphic `getAmount()`; date comparisons use purchase
+dates. Stable sorting preserves ties and the source collection is never reordered.
+`ArgumentParser` recognises the new prefixes and command-specific allowed-prefix
+checks prevent options such as `cur/` being silently ignored by unrelated commands.
+
+`ExchangeRates` stores manually supplied SGD-per-unit decimal rates.
+`ForeignExpense extends Expense` snapshots its original amount, currency and rate,
+and exposes the converted SGD amount to existing consumers. Conversion uses
+`BigDecimal` with half-up cent rounding. Amount edits validate the conversion before
+mutating either amount; they use the saved rate. Split expenses remain SGD-only.
+The reporting currency is fixed, so existing budgets and historical expenses are
+never silently reinterpreted after a base-currency change.
+
+`TripBook` owns named trips and their selection. `AppState.getTrip()` delegates to
+the selected trip, preserving existing trip commands and date-range calculations.
+The first named addition retains a configured legacy trip as `Original trip`.
+Names are unique, and selected-trip persistence uses a name rather than an index
+so skipped invalid trip records do not select an unintended trip.
+
+`Storage` supports foreign expense records, named trips and rates in addition to
+legacy formats. Malformed new records use the existing warning/skip behaviour.
+There is no live rate dependency or exclusive trip-expense assignment.
+
+Manual checks: sort filtered expenses then edit their displayed original indexes;
+change a configured rate and confirm an existing foreign expense is unchanged;
+restart after selecting a trip and confirm the selection, names and rate snapshots
+survive. `TravelFeaturesTest` covers these paths and old-file migration.
+
 ## Acknowledgements
 
 {list here sources of all reused/adapted ideas, code, documentation, and third-party libraries -- include links to the original source as well}

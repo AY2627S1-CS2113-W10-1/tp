@@ -1,5 +1,78 @@
 # TripJio - User Guide
 
+## New: sorting, manual exchange rates and multiple trips
+
+All existing amounts and budgets are interpreted as **SGD**. Reports continue to
+use the dollar symbol for SGD. This version does not fetch live exchange rates
+or support changing the reporting currency.
+
+### Sorting expenses
+
+```text
+list sort/amount order/desc
+list sort/date order/desc
+list c/food m/10-2026 sort/amount order/asc
+```
+
+Sort by `amount` (your SGD share) or `date` (purchase date, not entry time).
+Descending is the default when a sort is supplied. Without sorting, insertion
+order is unchanged. Equal values retain insertion order. `order/` requires
+`sort/`. Displayed indexes remain the original indexes for editing/deleting;
+sorting does not rearrange or save the underlying records.
+
+### Manual exchange rates
+
+```text
+rate set from/EUR to/SGD r/1.45
+rate list
+add d/Lunch a/12 c/food dt/10-10-2026 cur/EUR
+```
+
+The example rate means **1 EUR = 1.45 SGD**, not the reverse. 
+Supply a rate yourself by searching online; these are not live quotes. Rates
+must be positive plain decimals, at most 1000000, with up to eight decimal places.
+Both original and converted expense amounts must be within the existing positive
+amount limit; conversions rounding to zero are rejected.
+
+The lunch contributes SGD 17.40 to budgets, statistics and trip spending. Its
+original EUR amount and rate are displayed and saved. Updating EUR's rate affects
+only subsequently added expenses. `edit INDEX a/10` on this expense means EUR 10
+using its original saved rate. Currency/rate changes on an existing expense are
+not supported; delete and re-add if necessary. Without `cur/`, amounts remain SGD.
+`cur/SGD` uses rate 1 automatically. Foreign-currency split bills are not supported;
+`split ... cur/EUR` is rejected rather than silently counted as SGD.
+
+### Multiple trips
+
+```text
+trip add n/Japan s/01-12-2026 e/14-12-2026
+trip add n/Korea s/15-12-2026 e/21-12-2026
+trip list
+trip select 1
+trip status
+```
+
+Adding a trip selects it automatically. Names must be non-empty and unique
+(case-insensitive), and cannot contain `/`, `|` or line breaks.
+`trip list` shows indexes and a selected marker. `trip select INDEX` saves the
+selection. `trip set` updates only the selected trip's dates; it does not erase
+other trips. With no named trips, the original `trip set` workflow still works.
+When adding the first named trip, an existing unnamed trip is retained as
+`Original trip`. There is no trip deletion command in this version.
+
+Trip spending still includes all expenses within the selected trip's dates,
+including both boundaries. Expenses are **not assigned exclusively to trips**:
+overlapping trips can count the same expense. Selecting a trip does not filter
+`list`, `stats`, or budgets, which remain global/month-based.
+
+### Saved-data compatibility
+
+Existing `E|` and `S|` expenses and the legacy `[trip]` section still load.
+Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
+Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
+Keep a backup before using this format with an older application release: older
+releases do not understand the new records.
+
 ## Introduction
 
 **TripJio** is a desktop Command-Line Interface (CLI) budget tracker and travel management application designed for students. It combines the speed of keyboard typing with straightforward expense tracking, flexible monthly budgets, trip date monitoring, and detailed spending statistics to help you keep your student travel finances under control.
