@@ -27,6 +27,7 @@ public class Storage {
     private static final String EXPENSE_HEADER = "[expense]";
     private static final String BUDGET_HEADER = "[budget]";
     private static final String TRIP_HEADER = "[trip]";
+    private static final String TRIPS_HEADER = "[trips]";
     private static final String RATES_HEADER = "[rates]";
 
     /** Start of an expense line for a normal expense, e.g. "E|Lunch|12.50|FOOD|15-10-2026". */
@@ -87,7 +88,9 @@ public class Storage {
             }
 
             try {
-                if (RATES_HEADER.equals(section)) {
+                if (TRIPS_HEADER.equals(section)) {
+                    state.getTrips().loadStorageLine(line);
+                } else if (RATES_HEADER.equals(section)) {
                     state.getExchangeRates().loadStorageLine(line);
                 } else {
                     loadLine(line, section, expenses, budget, trip);
@@ -101,7 +104,7 @@ public class Storage {
 
     private static boolean isHeader(String line) {
         return line.equals(EXPENSE_HEADER) || line.equals(BUDGET_HEADER) || line.equals(TRIP_HEADER)
-                || line.equals(RATES_HEADER);
+                || line.equals(TRIPS_HEADER) || line.equals(RATES_HEADER);
     }
 
     /**
@@ -160,6 +163,12 @@ public class Storage {
 
         lines.add(TRIP_HEADER);
         lines.addAll(state.getTrip().toStorageLines());
+        List<String> tripLines = state.getTrips().toStorageLines();
+        if (!tripLines.isEmpty()) {
+            lines.add("");
+            lines.add(TRIPS_HEADER);
+            lines.addAll(tripLines);
+        }
         List<String> rateLines = state.getExchangeRates().toStorageLines();
         if (!rateLines.isEmpty()) {
             lines.add("");
