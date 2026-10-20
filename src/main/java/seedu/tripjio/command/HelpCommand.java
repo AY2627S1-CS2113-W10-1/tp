@@ -9,8 +9,8 @@ import seedu.tripjio.ui.Ui;
 public class HelpCommand extends Command {
     private static final String[] COMMANDS = {
         "help",
-        "add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE]",
-        "list [c/CATEGORY] [m/MONTH]",
+        "add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE] [cur/CURRENCY]",
+        "list [c/CATEGORY] [m/MONTH] [sort/amount|date] [order/asc|desc]",
         "edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]",
         "delete INDEX",
         "split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE "
@@ -20,6 +20,12 @@ public class HelpCommand extends Command {
         "budget status [m/MONTH]",
         "trip set s/START_DATE e/END_DATE",
         "trip status",
+        "trip add n/NAME s/START_DATE e/END_DATE",
+        "trip list",
+        "trip select INDEX",
+        "rate set from/CURRENCY to/SGD r/RATE",
+        "rate list",
+        "Amounts and reports use SGD; rates are manual, not live.",
         "stats [m/MONTH]",
         "stats compare m/MONTH m/MONTH",
         "exit"

@@ -3,6 +3,8 @@ package seedu.tripjio.model;
 import seedu.tripjio.model.budget.Budget;
 import seedu.tripjio.model.expense.ExpenseList;
 import seedu.tripjio.model.trip.Trip;
+import seedu.tripjio.model.trip.TripBook;
+import seedu.tripjio.model.expense.ExchangeRates;
 
 /**
  * Holds all of the user's data (expenses, budgets and the current trip) so it can be passed to commands
@@ -13,18 +15,19 @@ public class AppState {
 
     private final ExpenseList expenses;
     private final Budget budget;
-    private final Trip trip;
+    private final TripBook trips;
+    private final ExchangeRates exchangeRates = new ExchangeRates();
 
     public AppState() {
         this.expenses = new ExpenseList();
         this.budget = new Budget();
-        this.trip = new Trip();
+        this.trips = new TripBook(new Trip());
     }
 
     public AppState(ExpenseList expenses, Budget budget, Trip trip) {
         this.expenses = expenses;
         this.budget = budget;
-        this.trip = trip;
+        this.trips = new TripBook(trip);
     }
 
     public ExpenseList getExpenses() {
@@ -36,6 +39,14 @@ public class AppState {
     }
 
     public Trip getTrip() {
-        return trip;
+        return trips.getCurrent();
+    }
+
+    public TripBook getTrips() {
+        return trips;
+    }
+
+    public ExchangeRates getExchangeRates() {
+        return exchangeRates;
     }
 }

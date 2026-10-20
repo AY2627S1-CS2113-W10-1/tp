@@ -9,7 +9,7 @@ import java.util.Locale;
  * A fixed locale is always used, so that the output and the storage file look the same on every computer.
  */
 public class MoneyUtil {
-    /** Largest amount allowed for a single expense, budget or bill. */
+    /** Largest SGD amount allowed for a single expense, budget or bill. */
     public static final double MAX_AMOUNT = 1_000_000;
 
     private MoneyUtil() {
@@ -27,6 +27,16 @@ public class MoneyUtil {
         }
         if (amount > MAX_AMOUNT) {
             throw new TripJioException("Amount must not be more than " + format(MAX_AMOUNT) + ".");
+        }
+    }
+
+    /** Validates an original-currency amount without applying the SGD monetary cap. */
+    public static void validateOriginalAmount(double amount) throws TripJioException {
+        if (!Double.isFinite(amount) || amount <= 0) {
+            throw new TripJioException("Amount must be a finite number more than 0.");
+        }
+        if (java.math.BigDecimal.valueOf(amount).stripTrailingZeros().scale() > 2) {
+            throw new TripJioException("Amount must have at most 2 decimal places.");
         }
     }
 

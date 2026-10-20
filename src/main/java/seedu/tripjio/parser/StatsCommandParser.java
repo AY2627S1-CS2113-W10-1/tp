@@ -23,6 +23,7 @@ public class StatsCommandParser {
      */
     public static Command parse(String args) throws TripJioException {
         ArgumentParser arguments = new ArgumentParser(args);
+        arguments.checkAllowedPrefixes("m");
         boolean comparison = arguments.getPreamble().equalsIgnoreCase("compare");
         if (!comparison) {
             arguments.checkNoPreamble();

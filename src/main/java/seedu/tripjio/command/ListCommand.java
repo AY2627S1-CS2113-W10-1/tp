@@ -9,6 +9,7 @@ import seedu.tripjio.util.MoneyUtil;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Comparator;
 
 /**
  * Lists the user's expenses, optionally filtered by category and/or month.
@@ -21,6 +22,8 @@ public class ListCommand extends Command {
 
     /** Month to show, or null to show every month. */
     private final YearMonth month;
+    private final String sort;
+    private final boolean descending;
 
     /**
      * Creates a command to list expenses.
@@ -29,8 +32,15 @@ public class ListCommand extends Command {
      * @param month Month to filter by, or null for no month filter.
      */
     public ListCommand(Category category, YearMonth month) {
+        this(category, month, null, false);
+    }
+
+    /** Creates a sorted view without rearranging stored expenses or their indexes. */
+    public ListCommand(Category category, YearMonth month, String sort, boolean descending) {
         this.category = category;
         this.month = month;
+        this.sort = sort;
+        this.descending = descending;
     }
 
     @Override
@@ -42,9 +52,21 @@ public class ListCommand extends Command {
         }
 
         List<String> lines = new ArrayList<>();
+        List<Integer> indexes = new ArrayList<>();
+        for (int i = 0; i < expenses.size(); i++) {
+            if (matches(expenses.get(i))) {
+                indexes.add(i);
+            }
+        }
+        if (sort != null) {
+            Comparator<Integer> comparator = sort.equals("amount")
+                    ? Comparator.comparingDouble(i -> expenses.get(i).getAmount())
+                    : Comparator.comparing(i -> expenses.get(i).getDate());
+            indexes.sort(descending ? comparator.reversed() : comparator);
+        }
         double total = 0;
         // A counter loop is used instead of a for-each loop, because the original index must be shown.
-        for (int i = 0; i < expenses.size(); i++) {
+        for (int i : indexes) {
             Expense expense = expenses.get(i);
             if (matches(expense)) {
                 lines.add((i + 1) + ". " + expense);
