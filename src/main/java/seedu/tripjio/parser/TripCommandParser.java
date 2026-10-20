@@ -4,6 +4,8 @@ import seedu.tripjio.command.Command;
 import seedu.tripjio.command.TripSetCommand;
 import seedu.tripjio.command.TripStatusCommand;
 import seedu.tripjio.command.TripAddCommand;
+import seedu.tripjio.command.TripListCommand;
+import seedu.tripjio.command.TripSelectCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
@@ -22,6 +24,12 @@ public class TripCommandParser {
      * @throws TripJioException If the subcommand, parameters or dates are invalid.
      */
     public static Command parse(String args) throws TripJioException {
+        if (args.trim().equalsIgnoreCase("list")) {
+            return new TripListCommand();
+        }
+        if (args.trim().matches("(?i)select\\s+.*")) {
+            return new TripSelectCommand(ArgumentParser.parseIndex(args.trim().split("\\s+", 2)[1]));
+        }
         if (args.trim().equalsIgnoreCase("status")) {
             return new TripStatusCommand();
         }
