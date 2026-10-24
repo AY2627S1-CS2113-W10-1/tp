@@ -22,7 +22,21 @@ never silently reinterpreted after a base-currency change.
 
 `TripBook` owns named trips and their selection. `AppState.getTrip()` delegates to
 the selected trip, preserving existing trip commands and date-range calculations.
-The first named addition retains a configured legacy trip as `Original trip`.
+There is no legacy field or fallback. The selected index is -1 when none is selected.
+`hasCurrent()` guards nullable `getCurrent()` and `getCurrentName()`; `AppState.getTrip()`
+is also nullable. Commands validate selection before accessing trip dates.
+`setCurrentDates()` creates Original trip only for an empty book, otherwise updates
+the selected trip or throws if none is selected. `Trip.contains(date)` checks both
+inclusive boundaries and returns false for null dates or unset trips.
+
+Storage first checks whether a `[trips]` header exists anywhere in the file.
+If present, all `[trip]` data is ignored, including when named records are empty or
+invalid. Otherwise, a complete old trip is imported once as selected Original trip.
+Selections are resolved after reading trip records so section/record order does not
+affect valid references. No selection record means no selection; an invalid reference
+warns and clears selection. Saving always emits `[trips]`, even for an empty book,
+and never emits `[trip]`. TripMigrationTest covers all three file generations.
+
 Names are unique, and selected-trip persistence uses a name rather than an index
 so skipped invalid trip records do not select an unintended trip.
 
@@ -96,9 +110,10 @@ protects the model even when called without the CLI parser. The command override
 `execute` and `isMutating`, allowing the main loop to execute and save it through
 the common `Command` abstraction. No separate exception hierarchy is needed.
 
-`Storage` designates the `[trip]` section to `Trip`. Trip dates are formatted
-as `start=DD-MM-YYYY` and `end=DD-MM-YYYY`. An incomplete loaded pair remains unset;
-a reversed loaded pair is cleared and reported through the existing load warning.
+`Storage` reads legacy `[trip]` dates only when no `[trips]` header exists.
+An incomplete pair creates no trip; a reversed pair is cleared with a warning.
+Current saves use `T|NAME|START|END` records and an optional `A|NAME` selection
+inside `[trips]`, as described in the migration section above.
 Monthly statistics, comparisons and trip status are described above.
 
 {Describe the design and implementation of the product. Use UML diagrams and short code snippets where applicable.}

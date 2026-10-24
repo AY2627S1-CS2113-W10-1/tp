@@ -58,9 +58,11 @@ Adding a trip selects it automatically. Names must be non-empty and unique
 (case-insensitive), and cannot contain `/`, `|` or line breaks.
 `trip list` shows indexes and a selected marker. `trip select INDEX` saves the
 selection. `trip set` updates only the selected trip's dates; it does not erase
-other trips. With no named trips, the original `trip set` workflow still works.
-When adding the first named trip, an existing unnamed trip is retained as
-`Original trip`. There is no trip deletion command in this version.
+other trips. With no trips, `trip set` creates and selects `Original trip`.
+If trips exist but none is selected, `trip set` and `trip status` report:
+`No trip selected` and explain how to select one. Use `trip list`, then
+`trip select INDEX`; the application never chooses a trip silently.
+There is no trip deletion command in this version.
 
 Trip spending still includes all expenses within the selected trip's dates,
 including both boundaries. Expenses are **not assigned exclusively to trips**:
@@ -70,6 +72,13 @@ overlapping trips can count the same expense. Selecting a trip does not filter
 ### Saved-data compatibility
 
 Existing `E|` and `S|` expenses and the legacy `[trip]` section still load.
+An old file containing only `[trip]` migrates its complete dates to a selected
+`Original trip`. If `[trips]` is present, it is authoritative and the old
+`[trip]` copy is ignored, even when `[trips]` is empty or invalid.
+New saves write only `[trips]`, never `[trip]`.
+Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
+one of them; no `A|` line means no trip selected. Invalid selection names produce
+a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
@@ -315,7 +324,9 @@ Whenever you add or edit an expense, TripJio automatically evaluates your spendi
 ### 4. Trip Dates & Management
 
 #### Setting Trip Dates: `trip set`
-Configures the start and end dates of your current trip. Setting new dates replaces any previously saved trip.
+Updates the selected trip's dates without changing other trips. With an empty trip
+list it creates and selects Original trip. If trips exist but none is selected,
+use `trip select INDEX` first.
 
 * **Format**: `trip set s/START_DATE e/END_DATE`
 * **Parameters**:
@@ -426,9 +437,9 @@ E|Museum ticket|15.00|ENTERTAINMENT|12-10-2026
 default=1000.00
 12-2026=1500.00
 
-[trip]
-start=10-12-2026
-end=24-12-2026
+[trips]
+T|Original trip|10-12-2026|24-12-2026
+A|Original trip
 ```
 
 * **UTF-8 Encoding**: File content is encoded in UTF-8, so international characters (e.g. `Phở`, `Café`) are preserved across platforms.
@@ -442,7 +453,10 @@ end=24-12-2026
 **A:** Simply copy the `data/tripjio.txt` file from your current TripJio folder to the `data/` folder on your other computer.
 
 **Q: Can I manually edit `data/tripjio.txt`?**  
-**A:** Yes, you can edit the file in any text editor. Ensure you follow the block structure (`[expense]`, `[budget]`, `[trip]`) and date formats (`DD-MM-YYYY` for dates, `MM-YYYY` for budgets). If any line contains invalid syntax, TripJio will skip that line with a warning upon launch while preserving the rest.
+**A:** Yes, but back up the file first. Current sections include `[expense]`,
+`[budget]`, `[trips]` and `[rates]`. Use `DD-MM-YYYY` for dates and `MM-YYYY`
+for budgets. Invalid records produce warnings; invalid selected-trip names leave
+no trip selected. The old `[trip]` section is used only when `[trips]` is absent.
 
 ---
 
