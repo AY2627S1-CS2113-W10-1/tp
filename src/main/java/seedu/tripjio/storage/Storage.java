@@ -72,6 +72,9 @@ public class Storage {
         Budget budget = new Budget();
         Trip trip = new Trip();
         AppState state = new AppState(expenses, budget, trip);
+        boolean hasNamedSection = lines.stream().anyMatch(line -> line.trim().equals(TRIPS_HEADER));
+        List<String> selections = new ArrayList<>();
+        List<Integer> selectionLines = new ArrayList<>();
 
         // Header of the block being read, or null before the first header.
         String section = null;
@@ -89,14 +92,30 @@ public class Storage {
 
             try {
                 if (TRIPS_HEADER.equals(section)) {
-                    state.getTrips().loadStorageLine(line);
+                    if (line.startsWith("A|")) {
+                        selections.add(line);
+                        selectionLines.add(lineNumber);
+                    } else {
+                        state.getTrips().loadStorageLine(line);
+                    }
                 } else if (RATES_HEADER.equals(section)) {
                     state.getExchangeRates().loadStorageLine(line);
-                } else {
+                } else if (!(hasNamedSection && TRIP_HEADER.equals(section))) {
                     loadLine(line, section, expenses, budget, trip);
                 }
             } catch (TripJioException e) {
                 ui.showError("Skipped invalid line " + lineNumber + " in data file: " + e.getMessage());
+            }
+        }
+        if (!hasNamedSection) {
+            state.getTrips().importOriginal(trip);
+        }
+        // Resolve names only after all trip records have loaded, even if A| appears before T|.
+        for (int i = 0; i < selections.size(); i++) {
+            try {
+                state.getTrips().loadStorageLine(selections.get(i));
+            } catch (TripJioException e) {
+                ui.showError("Skipped invalid line " + selectionLines.get(i) + " in data file: " + e.getMessage());
             }
         }
         return state;
@@ -161,14 +180,9 @@ public class Storage {
         lines.addAll(state.getBudget().toStorageLines());
         lines.add("");
 
-        lines.add(TRIP_HEADER);
-        lines.addAll(state.getTrip().toStorageLines());
-        List<String> tripLines = state.getTrips().toStorageLines();
-        if (!tripLines.isEmpty()) {
-            lines.add("");
-            lines.add(TRIPS_HEADER);
-            lines.addAll(tripLines);
-        }
+        // Always write this header: an explicitly empty named section must override stale legacy data.
+        lines.add(TRIPS_HEADER);
+        lines.addAll(state.getTrips().toStorageLines());
         List<String> rateLines = state.getExchangeRates().toStorageLines();
         if (!rateLines.isEmpty()) {
             lines.add("");
