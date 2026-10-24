@@ -7,33 +7,54 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Owns named trips and an active selection while preserving legacy single-trip data. */
+/** Owns named trips and an optional active selection; no fallback trip is retained. */
 public class TripBook {
-    private final Trip legacy;
     private final List<String> names = new ArrayList<>();
     private final List<Trip> trips = new ArrayList<>();
-    private int selected;
+    private int selected = -1;
 
-    public TripBook(Trip legacy) {
-        this.legacy = legacy;
+    public TripBook() {
     }
 
+    /** Returns the selected trip, or null when there is no active selection. */
     public Trip getCurrent() {
-        return trips.isEmpty() ? legacy : trips.get(selected);
+        return hasCurrent() ? trips.get(selected) : null;
     }
 
-    /** Adds and selects a validated trip, migrating an existing unnamed trip on first use. */
+    public boolean hasCurrent() {
+        return selected >= 0 && selected < trips.size();
+    }
+
+    /** Returns the selected name, or null when no trip is selected. */
+    public String getCurrentName() {
+        return hasCurrent() ? names.get(selected) : null;
+    }
+
+    /** Imports a complete v1.0 trip once; incomplete legacy dates do not create a trip. */
+    public void importOriginal(Trip original) {
+        if (trips.isEmpty() && original != null && original.isSet()) {
+            names.add("Original trip");
+            trips.add(original);
+            selected = 0;
+        }
+    }
+
+    /** Creates Original trip for an empty book, otherwise updates only an explicitly selected trip. */
+    public void setCurrentDates(LocalDate start, LocalDate end) throws TripJioException {
+        if (trips.isEmpty()) {
+            add("Original trip", start, end);
+        } else if (!hasCurrent()) {
+            throw new TripJioException("No trip selected. Use trip list, then trip select INDEX.");
+        } else {
+            getCurrent().set(start, end);
+        }
+    }
+
+    /** Adds and selects a validated named trip without changing any existing trip. */
     public void add(String name, LocalDate start, LocalDate end) throws TripJioException {
         validateName(name);
         Trip trip = new Trip();
         trip.set(start, end);
-        if (trips.isEmpty() && legacy.isSet()) {
-            if (name.equalsIgnoreCase("Original trip")) {
-                throw new TripJioException("Original trip is reserved for your existing trip. Choose another name.");
-            }
-            names.add("Original trip");
-            trips.add(legacy);
-        }
         names.add(name.trim());
         trips.add(trip);
         selected = trips.size() - 1;
@@ -54,7 +75,7 @@ public class TripBook {
 
     /** Selects an existing displayed trip index without changing any expense. */
     public void select(int index) throws TripJioException {
-        int size = trips.isEmpty() && legacy.isSet() ? 1 : trips.size();
+        int size = trips.size();
         if (index < 1 || index > size) {
             throw new TripJioException("Invalid trip index. Use trip list to see available trips.");
         }
@@ -64,12 +85,6 @@ public class TripBook {
     /** Provides names, dates and an active marker in stable creation order. */
     public List<String> displayLines() {
         List<String> lines = new ArrayList<>();
-        if (trips.isEmpty()) {
-            if (legacy.isSet()) {
-                lines.add(formatLine(1, "Original trip", legacy, true));
-            }
-            return lines;
-        }
         for (int i = 0; i < trips.size(); i++) {
             lines.add(formatLine(i + 1, names.get(i), trips.get(i), i == selected));
         }
@@ -89,7 +104,7 @@ public class TripBook {
             lines.add("T|" + names.get(i) + "|" + DateUtil.formatDate(trip.getStart())
                     + "|" + DateUtil.formatDate(trip.getEnd()));
         }
-        if (!trips.isEmpty()) {
+        if (hasCurrent()) {
             lines.add("A|" + names.get(selected));
         }
         return lines;
@@ -104,7 +119,11 @@ public class TripBook {
             trip.set(DateUtil.parseDate(fields[2]), DateUtil.parseDate(fields[3]));
             names.add(fields[1].trim());
             trips.add(trip);
-        } else if (fields.length == 2 && fields[0].equals("A") && names.contains(fields[1])) {
+        } else if (fields.length == 2 && fields[0].equals("A")) {
+            if (!names.contains(fields[1])) {
+                selected = -1;
+                throw new TripJioException("Selected trip not found. Use trip list, then trip select INDEX.");
+            }
             selected = names.indexOf(fields[1]);
         } else {
             throw new TripJioException("Invalid named trip or missing selected trip.");
