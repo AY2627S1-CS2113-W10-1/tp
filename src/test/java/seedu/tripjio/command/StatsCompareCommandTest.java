@@ -73,7 +73,7 @@ class StatsCompareCommandTest {
                 + "==============================\n", output.toString().replace("\r\n", "\n"));
         assertEquals(6, state.getExpenses().size());
         assertEquals(22.60, state.getExpenses().getTotalSpentInMonth(YearMonth.of(2028, 1)));
-        assertFalse(state.getTrip().isSet());
+        assertFalse(state.getTrips().hasCurrent());
     }
 
     @Test

@@ -72,7 +72,7 @@ class StorageTest {
         storageAt(file).save(state);
 
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-        assertEquals(List.of("[expense]", "E|Lunch|12.50|FOOD|15-10-2026", "", "[budget]", "", "[trip]"), lines);
+        assertEquals(List.of("[expense]", "E|Lunch|12.50|FOOD|15-10-2026", "", "[budget]", "", "[trips]"), lines);
     }
 
     @Test

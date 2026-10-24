@@ -50,7 +50,7 @@ class TripSetCommandTest {
     @Test
     void invalidInput_throwsWithoutChangingExistingTrip() throws TripJioException {
         LocalDate original = LocalDate.of(2026, 12, 1);
-        state.getTrip().set(original, original);
+        state.getTrips().setCurrentDates(original, original);
         String[] inputs = {
             "trip", "trip set", "trip unknown", "trip set extra s/01-12-2026 e/02-12-2026",
             "trip set s/01-12-2026", "trip set e/02-12-2026", "trip set s/ e/02-12-2026",
@@ -73,15 +73,16 @@ class TripSetCommandTest {
     @Test
     void model_rejectsNullAndReversedDates() {
         LocalDate date = LocalDate.of(2026, 12, 1);
-        assertThrows(TripJioException.class, () -> state.getTrip().set(null, date));
-        assertThrows(TripJioException.class, () -> state.getTrip().set(date, null));
-        assertThrows(TripJioException.class, () -> state.getTrip().set(date, date.minusDays(1)));
-        assertFalse(state.getTrip().isSet());
+        assertThrows(TripJioException.class, () -> state.getTrips().setCurrentDates(null, date));
+        assertThrows(TripJioException.class, () -> state.getTrips().setCurrentDates(date, null));
+        assertThrows(TripJioException.class, () -> state.getTrips().setCurrentDates(date, date.minusDays(1)));
+        assertFalse(state.getTrips().hasCurrent());
+        assertTrue(state.getTrips().displayLines().isEmpty());
     }
 
     @Test
     void storage_invalidOrIncompleteTrip_notSet() throws TripJioException {
-        Trip trip = state.getTrip();
+        Trip trip = new Trip();
         assertThrows(TripJioException.class, () -> trip.loadStorageLine("unknown=01-12-2026"));
         assertThrows(TripJioException.class, () -> trip.loadStorageLine("start=31-02-2026"));
         trip.loadStorageLine("end=01-12-2026");
