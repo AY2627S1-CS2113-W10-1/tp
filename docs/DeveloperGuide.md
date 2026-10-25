@@ -1,5 +1,29 @@
 # Developer Guide
 
+## Selected-trip filtering
+
+`ArgumentParser.getFlag("trip")` handles the valueless flag without relaxing
+validation of ordinary required/optional values. Only list, stats and split list
+allow it; comparisons and mutating commands reject it.
+
+`ExpenseList.getExpensesBetween(start, end)` returns a fresh insertion-ordered
+list including both endpoints; invalid/null ranges throw IllegalArgumentException.
+`ExpenseFilter.select(state, category, month, tripOnly)` is the shared filtering
+entry point for commands and future export. It validates selection before returning
+results, resolves it at execution time, and intersects trip dates/month/category.
+The returned list is independent, but contains the original Expense objects.
+
+List and split list retain indexes from the global expense collection rather than
+renumbering filtered results. TripStatsCommand is read-only and uses
+`Statistics.getCategoryTotals(filteredExpenses)`, which also backs monthly totals,
+so foreign amounts and split shares continue through polymorphic getAmount().
+The existing StatsCommand clock-based default and StatsCompareCommand are unchanged.
+
+TripFilterCommandTest covers cross-year boundaries, combined filters/sorting,
+missing selection, invalid flags, SGD conversion, split shares and unchanged data.
+Shared changes to ExpenseList, ListCommand, ArgumentParser and HelpCommand need
+Thien's review; SplitListCommand and SplitCommandParser changes need John's review.
+
 ## Trip edit and delete
 
 `TripCommandParser` validates the index, allowed prefixes, duplicate/empty values

@@ -1,5 +1,35 @@
 # TripJio - User Guide
 
+## Selected-trip filtering
+
+```text
+list trip/
+list trip/ c/food m/10-2026 sort/amount order/desc
+stats trip/
+stats m/10-2026 trip/
+split list trip/ m/10-2026
+```
+
+`trip/` is a flag with no value, allowed once on list, stats and split list.
+It uses the currently selected trip's inclusive start/end dates. Select a trip
+with `trip select INDEX` first. If none is selected, the command reports an error,
+even if there are no expenses. `trip/1`, repeated flags and extra text are invalid.
+
+Filters intersect: an expense must match the trip dates and any supplied month
+or category. List sorting still works and keeps original expense indexes.
+Split list shows only split bills. Reports use SGD amounts and your split share.
+`stats trip/` covers the whole trip, including trips spanning several months;
+`stats m/MM-YYYY trip/` covers only that month's portion. Unfiltered `stats`
+still defaults to the current month. `stats compare` does not accept `trip/`.
+
+Trip statistics starts with `Spending for trip NAME:`, or
+`Spending for trip NAME in MONTH YEAR:` when a month is supplied. All six category
+rows and TOTAL SPENT follow the existing statistics format. An empty intersection
+shows zeros and `No expenses match the selected trip filter.`
+List and split list use their existing empty-filter messages.
+Filtering is read-only, does not assign expenses to trips, and does not change
+budgets, saved data or the selected trip. Overlapping trips can include the same expense.
+
 ## New: sorting, manual exchange rates and multiple trips
 
 All existing amounts and budgets are interpreted as **SGD**. Reports continue to
