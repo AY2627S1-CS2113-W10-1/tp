@@ -8,6 +8,7 @@ import seedu.tripjio.util.MoneyUtil;
 import java.time.YearMonth;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.List;
 
 /**
  * Calculates spending statistics for the {@code stats} and {@code stats compare} commands:
@@ -27,11 +28,16 @@ public class Statistics {
      * @return Totals rounded to cents, including zero for unused categories, in enum order.
      */
     public static Map<Category, Double> getMonthlyTotals(ExpenseList expenses, YearMonth month) {
+        return getCategoryTotals(expenses.getExpensesInMonth(month));
+    }
+
+    /** Totals a prefiltered list in SGD, counting split shares and including every category. */
+    public static Map<Category, Double> getCategoryTotals(List<Expense> expenses) {
         Map<Category, Double> totals = new EnumMap<>(Category.class);
         for (Category category : Category.values()) {
             totals.put(category, 0.0);
         }
-        for (Expense expense : expenses.getExpensesInMonth(month)) {
+        for (Expense expense : expenses) {
             Category category = expense.getCategory();
             totals.put(category, totals.get(category) + expense.getAmount());
         }
