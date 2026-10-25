@@ -1,5 +1,26 @@
 # Developer Guide
 
+## Trip edit and delete
+
+`TripCommandParser` validates the index, allowed prefixes, duplicate/empty values
+and date syntax for `trip edit` and `trip delete`. Separate commands extend
+`Command`, delegate mutation to `TripBook`, and print through `Ui`.
+Both return true from `isMutating()` for automatic saving. They leave
+`getAffectedMonth()` null because neither changes expense spending.
+
+`TripBook.edit` validates the name against every other trip and validates the
+combined old/new dates through `Trip.set` before renaming. The same Trip object,
+selection and omitted fields are preserved. Failure changes nothing.
+`TripBook.delete` removes the matching name/trip pair: deleting the selected
+position sets selection to -1; deleting a preceding position decrements selection.
+Deleting after it leaves selection unchanged. No expenses or budgets are removed.
+
+The existing named-trip storage persists edits and the absence of selection.
+`TripEditDeleteCommandTest` verifies validation, selection shifts, retained
+expenses, renamed selection after reload, and no resurrection after deleting all
+trips. HelpCommand has only the two new command lines; its owner should review
+that shared-file change.
+
 ## Sorting, currencies and multiple trips
 
 `ListCommand` sorts a temporary list of original expense indexes using a comparator.
