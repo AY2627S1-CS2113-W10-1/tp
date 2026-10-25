@@ -6,6 +6,7 @@ import seedu.tripjio.command.TripStatusCommand;
 import seedu.tripjio.command.TripAddCommand;
 import seedu.tripjio.command.TripListCommand;
 import seedu.tripjio.command.TripSelectCommand;
+import seedu.tripjio.command.TripEditCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
@@ -17,7 +18,7 @@ public class TripCommandParser {
     }
 
     /**
-     * Parses trip set with two required dates, or trip status without arguments.
+     * Parses trip creation, selection, editing and status commands.
      *
      * @param args Text after the trip command word.
      * @return Command containing the parsed dates.
@@ -37,6 +38,22 @@ public class TripCommandParser {
             throw new TripJioException("Trip status does not accept parameters. Use: trip status.");
         }
         ArgumentParser arguments = new ArgumentParser(args);
+        String[] words = arguments.getPreamble().split("\\s+", 2);
+        if (words[0].equalsIgnoreCase("edit")) {
+            arguments.checkAllowedPrefixes("n", "s", "e");
+            if (words.length != 2) {
+                throw new TripJioException("A trip index is required. Use trip list to see available trips.");
+            }
+            int index = ArgumentParser.parseIndex(words[1]);
+            String name = arguments.getOptional("n");
+            String start = arguments.getOptional("s");
+            String end = arguments.getOptional("e");
+            if (name == null && start == null && end == null) {
+                throw new TripJioException("Give at least one trip field to edit: n/, s/ or e/.");
+            }
+            return new TripEditCommand(index, name == null ? null : ArgumentParser.parseDescription(name),
+                    start == null ? null : DateUtil.parseDate(start), end == null ? null : DateUtil.parseDate(end));
+        }
         if (arguments.getPreamble().equalsIgnoreCase("add")) {
             arguments.checkAllowedPrefixes("n", "s", "e");
             String name = ArgumentParser.parseDescription(arguments.getRequired("n"));
@@ -46,6 +63,7 @@ public class TripCommandParser {
         arguments.checkAllowedPrefixes("s", "e");
         if (!arguments.getPreamble().equalsIgnoreCase("set")) {
             throw new TripJioException("Use trip add n/NAME s/DATE e/DATE, trip list, trip select INDEX, "
+                    + "trip edit INDEX [n/NAME] [s/DATE] [e/DATE], "
                     + "trip set s/DATE e/DATE, or trip status. Dates: DD-MM-YYYY.");
         }
         for (String prefix : new String[] {"d", "a", "c", "dt", "m", "n", "my"}) {

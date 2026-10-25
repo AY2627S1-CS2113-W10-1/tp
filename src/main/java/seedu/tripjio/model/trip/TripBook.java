@@ -62,12 +62,17 @@ public class TripBook {
 
     /** Rejects ambiguous names and storage delimiters before changing the collection. */
     private void validateName(String name) throws TripJioException {
+        validateName(name, -1);
+    }
+
+    /** Allows a renamed trip to retain its own name, but not another trip's name. */
+    private void validateName(String name, int ignoredIndex) throws TripJioException {
         if (name == null || name.isBlank() || name.contains("|") || name.contains("/")
                 || name.contains("\n") || name.contains("\r")) {
             throw new TripJioException("Trip name must not be empty or contain '/', '|', or line breaks.");
         }
-        for (String existing : names) {
-            if (existing.equalsIgnoreCase(name.trim())) {
+        for (int i = 0; i < names.size(); i++) {
+            if (i != ignoredIndex && names.get(i).equalsIgnoreCase(name.trim())) {
                 throw new TripJioException("A trip with that name already exists.");
             }
         }
@@ -75,11 +80,33 @@ public class TripBook {
 
     /** Selects an existing displayed trip index without changing any expense. */
     public void select(int index) throws TripJioException {
-        int size = trips.size();
-        if (index < 1 || index > size) {
+        checkIndex(index);
+        selected = index - 1;
+    }
+
+    /** Validates the one-based index shown by trip list. */
+    private void checkIndex(int index) throws TripJioException {
+        if (index < 1 || index > trips.size()) {
             throw new TripJioException("Invalid trip index. Use trip list to see available trips.");
         }
-        selected = index - 1;
+    }
+
+    /**
+     * Edits only supplied fields, preserving selection and all existing data on validation failure.
+     * Null fields mean unchanged. At least one field is required.
+     */
+    public void edit(int index, String name, LocalDate start, LocalDate end) throws TripJioException {
+        checkIndex(index);
+        if (name == null && start == null && end == null) {
+            throw new TripJioException("Give at least one trip field to edit: n/, s/ or e/.");
+        }
+        int position = index - 1;
+        Trip trip = trips.get(position);
+        String newName = name == null ? names.get(position) : name.trim();
+        validateName(name == null ? newName : name, position);
+        // Trip.set validates the combined dates before changing either; rename only after success.
+        trip.set(start == null ? trip.getStart() : start, end == null ? trip.getEnd() : end);
+        names.set(position, newName);
     }
 
     /** Provides names, dates and an active marker in stable creation order. */
