@@ -24,6 +24,7 @@ public class HelpCommand extends Command {
         "trip list",
         "trip select INDEX",
         "trip edit INDEX [n/NAME] [s/START_DATE] [e/END_DATE]",
+        "trip delete INDEX",
         "rate set from/CURRENCY to/SGD r/RATE",
         "rate list",
         "Amounts and reports use SGD; rates are manual, not live.",

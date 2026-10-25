@@ -109,6 +109,20 @@ public class TripBook {
         names.set(position, newName);
     }
 
+    /** Deletes a trip only, returning its name; expenses are never removed. */
+    public String delete(int index) throws TripJioException {
+        checkIndex(index);
+        int position = index - 1;
+        String name = names.remove(position);
+        trips.remove(position);
+        if (selected == position) {
+            selected = -1;
+        } else if (selected > position) {
+            selected--;
+        }
+        return name;
+    }
+
     /** Provides names, dates and an active marker in stable creation order. */
     public List<String> displayLines() {
         List<String> lines = new ArrayList<>();

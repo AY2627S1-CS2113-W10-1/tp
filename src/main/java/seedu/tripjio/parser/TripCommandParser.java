@@ -7,6 +7,7 @@ import seedu.tripjio.command.TripAddCommand;
 import seedu.tripjio.command.TripListCommand;
 import seedu.tripjio.command.TripSelectCommand;
 import seedu.tripjio.command.TripEditCommand;
+import seedu.tripjio.command.TripDeleteCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
@@ -18,7 +19,7 @@ public class TripCommandParser {
     }
 
     /**
-     * Parses trip creation, selection, editing and status commands.
+     * Parses trip creation, selection, editing, deletion and status commands.
      *
      * @param args Text after the trip command word.
      * @return Command containing the parsed dates.
@@ -39,12 +40,16 @@ public class TripCommandParser {
         }
         ArgumentParser arguments = new ArgumentParser(args);
         String[] words = arguments.getPreamble().split("\\s+", 2);
-        if (words[0].equalsIgnoreCase("edit")) {
-            arguments.checkAllowedPrefixes("n", "s", "e");
+        if (words[0].equalsIgnoreCase("edit") || words[0].equalsIgnoreCase("delete")) {
+            boolean editing = words[0].equalsIgnoreCase("edit");
+            arguments.checkAllowedPrefixes(editing ? new String[] {"n", "s", "e"} : new String[0]);
             if (words.length != 2) {
                 throw new TripJioException("A trip index is required. Use trip list to see available trips.");
             }
             int index = ArgumentParser.parseIndex(words[1]);
+            if (!editing) {
+                return new TripDeleteCommand(index);
+            }
             String name = arguments.getOptional("n");
             String start = arguments.getOptional("s");
             String end = arguments.getOptional("e");
@@ -63,7 +68,7 @@ public class TripCommandParser {
         arguments.checkAllowedPrefixes("s", "e");
         if (!arguments.getPreamble().equalsIgnoreCase("set")) {
             throw new TripJioException("Use trip add n/NAME s/DATE e/DATE, trip list, trip select INDEX, "
-                    + "trip edit INDEX [n/NAME] [s/DATE] [e/DATE], "
+                    + "trip edit INDEX [n/NAME] [s/DATE] [e/DATE], trip delete INDEX, "
                     + "trip set s/DATE e/DATE, or trip status. Dates: DD-MM-YYYY.");
         }
         for (String prefix : new String[] {"d", "a", "c", "dt", "m", "n", "my"}) {
