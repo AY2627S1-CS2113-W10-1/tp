@@ -42,7 +42,7 @@ public class SplitCommand extends Command {
         String expenseWord = (count == 1) ? "expense" : "expenses";
 
         ui.showMessage("Got it. I've added this split expense:",
-                "  " + expense,
+                "  " + expense.toString(),
                 "Now you have " + count + " " + expenseWord + " in the list.");
     }
 

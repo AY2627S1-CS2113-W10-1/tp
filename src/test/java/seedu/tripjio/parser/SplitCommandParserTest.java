@@ -1,7 +1,9 @@
 package seedu.tripjio.parser;
 
 import org.junit.jupiter.api.Test;
+
 import seedu.tripjio.command.Command;
+import seedu.tripjio.command.SplitCommand;
 import seedu.tripjio.command.SplitListCommand;
 import seedu.tripjio.exception.TripJioException;
 
@@ -10,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link SplitCommandParser}.
+ */
 public class SplitCommandParserTest {
 
     @Test
@@ -25,15 +30,16 @@ public class SplitCommandParserTest {
     }
 
     @Test
-    public void parse_validEqualSplit_success() throws TripJioException {
+    public void parse_validEqualSplit_returnsSplitCommand() throws TripJioException {
         Command command = SplitCommandParser.parse("d/Dinner a/90 n/3");
+        assertTrue(command instanceof SplitCommand);
         assertNotNull(command);
     }
 
     @Test
-    public void parse_validCustomSplit_success() throws TripJioException {
-        Command command = SplitCommandParser.parse("d/Dinner a/90 n/3 my/45 c/FOOD");
-        assertNotNull(command);
+    public void parse_validCustomSplit_returnsSplitCommand() throws TripJioException {
+        Command command = SplitCommandParser.parse("d/Dinner a/90 n/3 my/45 c/FOOD dt/14-10-2026");
+        assertTrue(command instanceof SplitCommand);
     }
 
     @Test
@@ -56,11 +62,22 @@ public class SplitCommandParserTest {
 
     @Test
     public void parse_customShareExceedsTotal_throwsException() {
-        assertThrows(TripJioException.class, () -> SplitCommandParser.parse("d/Dinner a/90 n/3 my/100"));
+        TripJioException e = assertThrows(TripJioException.class, () ->
+                SplitCommandParser.parse("d/Dinner a/90 n/3 my/100"));
+        assertEquals("Your custom share cannot be more than the total bill.", e.getMessage());
     }
 
     @Test
     public void parse_equalShareTooSmall_throwsException() {
-        assertThrows(TripJioException.class, () -> SplitCommandParser.parse("d/Candy a/0.05 n/50"));
+        TripJioException e = assertThrows(TripJioException.class, () ->
+                SplitCommandParser.parse("d/Candy a/0.05 n/50"));
+        assertEquals("Each person's share must be at least $0.01.", e.getMessage());
+    }
+
+    @Test
+    public void parse_futureDate_throwsException() {
+        TripJioException e = assertThrows(TripJioException.class, () ->
+                SplitCommandParser.parse("d/Dinner a/90 n/3 dt/31-12-2099"));
+        assertEquals("Expense date cannot be in the future.", e.getMessage());
     }
 }
