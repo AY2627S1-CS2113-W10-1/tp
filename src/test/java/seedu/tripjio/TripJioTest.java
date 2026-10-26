@@ -14,7 +14,9 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Runs the whole main loop with fake keyboard input to check separators, saving and budget warnings. */
 class TripJioTest {
@@ -43,7 +45,7 @@ class TripJioTest {
     }
 
     @Test
-    void run_addExpense_savesDataAndPrintSeparator() throws  IOException {
+    void run_addExpense_savesDataAndPrintsSeparator() throws IOException {
         String output = run("add d/Lunch a/12.50 c/food dt/15-10-2026");
 
         assertTrue(output.contains("Added expense"));
@@ -58,11 +60,10 @@ class TripJioTest {
         List<String> lines = Arrays.asList(output.split("\n"));
         int errorIndex = indexOfLineStartingWith(lines, "Error: ");
 
-        assertTrue(errorIndex >= 0, "An error line shoule be printed");
+        assertTrue(errorIndex >= 0, "An error line should be printed");
         assertEquals(DIVIDER, lines.get(errorIndex + 1), "The separator should follow the error");
 
-        assertFalse(readDataFile(). contains("E| "));
-
+        assertFalse(readDataFile().contains("E|"));
     }
 
     @Test
@@ -100,5 +101,4 @@ class TripJioTest {
         }
         return -1;
     }
-
 }
