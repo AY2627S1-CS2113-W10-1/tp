@@ -60,7 +60,8 @@ class StatsCommandTest {
     void execute_monthFilterAndSplitShares_correctTotalsAndOrder() throws TripJioException {
         state.getExpenses().add(new Expense("First day", 0.10, Category.FOOD, LocalDate.of(2028, 2, 1)));
         state.getExpenses().add(new Expense("Leap day", 0.20, Category.FOOD, LocalDate.of(2028, 2, 29)));
-        state.getExpenses().add(new SplitExpense("Equal", 90, 3, null, Category.FOOD, LocalDate.of(2028, 2, 15), new ArrayList<>(), null, null, null));
+        state.getExpenses().add(new SplitExpense("Equal", 90, 3, null, Category.FOOD, 
+                LocalDate.of(2028, 2, 15), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new SplitExpense("Custom", 100, 4, 12.50,
                 Category.TRANSPORT, LocalDate.of(2028, 2, 16), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new Expense("Before", 500, Category.FOOD, LocalDate.of(2028, 1, 31)));

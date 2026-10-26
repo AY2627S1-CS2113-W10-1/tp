@@ -96,7 +96,8 @@ class TripStatusCommandTest {
         state.getTrip().set(start, end);
         state.getExpenses().add(new Expense("Before", 100, Category.FOOD, start.minusDays(1)));
         state.getExpenses().add(new Expense("Start", 10.10, Category.FOOD, start));
-        state.getExpenses().add(new SplitExpense("Dinner", 90, 3, null, Category.FOOD, start.plusDays(1), new ArrayList<>(), null, null, null));
+        state.getExpenses().add(new SplitExpense("Dinner", 90, 3, null, Category.FOOD, 
+                start.plusDays(1), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new Expense("End", 20.20, Category.TRANSPORT, end));
         state.getExpenses().add(new Expense("After", 200, Category.FOOD, end.plusDays(1)));
         on("2027-01-02").execute(state, ui);

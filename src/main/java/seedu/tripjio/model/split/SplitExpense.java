@@ -26,7 +26,9 @@ public class SplitExpense extends Expense {
                         List<String> participantNames, String payerName, 
                         String currency, Double exchangeRate) {
         super(description, 
-              (currency != null && exchangeRate != null) ? ExchangeRates.toSgd(inputAmount, exchangeRate) : inputAmount, 
+              (currency != null && exchangeRate != null) 
+                      ? ExchangeRates.toSgd(inputAmount, exchangeRate) 
+                      : inputAmount, 
               category, date);
         this.numberOfPeople = numberOfPeople;
         this.customShare = customShare;
@@ -70,14 +72,34 @@ public class SplitExpense extends Expense {
         return owed;
     }
 
-    public String getPayerName() { return payerName; }
-    public List<String> getParticipantNames() { return participantNames; }
-    public String getCurrency() { return currency; }
-    public Double getExchangeRate() { return exchangeRate; }
-    public int getNumberOfPeople() { return numberOfPeople; }
-    public Double getCustomShare() { return customShare; }
-    public boolean hasCustomShare() { return hasCustomShare; }
-
+    public String getPayerName() { 
+        return payerName; 
+    }
+    
+    public List<String> getParticipantNames() { 
+        return participantNames; 
+    }
+    
+    public String getCurrency() { 
+        return currency; 
+    }
+    
+    public Double getExchangeRate() { 
+        return exchangeRate; 
+    }
+    
+    public int getNumberOfPeople() { 
+        return numberOfPeople; 
+    }
+    
+    public Double getCustomShare() { 
+        return customShare; 
+    }
+    
+    public boolean hasCustomShare() { 
+        return hasCustomShare; 
+    }
+    
     @Override
     public String toString() {
         String base = super.toString() + " (Split among " + numberOfPeople + ")";

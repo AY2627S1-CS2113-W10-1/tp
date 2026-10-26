@@ -95,7 +95,8 @@ public class SplitCommandParser {
         }
 
         if (currency != null && rate == null) {
-            throw new TripJioException("You must provide an exchange rate (rate/) when specifying a foreign currency (cur/).");
+            throw new TripJioException("You must provide an exchange rate (rate/) " 
+                    + "when specifying a foreign currency (cur/).");
         }
 
         return new SplitCommand(description, amount, people, myShare, category, date, 

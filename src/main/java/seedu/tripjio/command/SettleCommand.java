@@ -28,7 +28,8 @@ public class SettleCommand extends Command {
             settleAmount = Math.abs(net);
         } else {
             if (amount > Math.abs(net) + 0.005) {
-                throw new TripJioException("Cannot settle more than the balance of $" + String.format("%.2f", Math.abs(net)));
+                throw new TripJioException("Cannot settle more than the balance of $" 
+                        + String.format("%.2f", Math.abs(net)));
             }
             settleAmount = amount;
         }
