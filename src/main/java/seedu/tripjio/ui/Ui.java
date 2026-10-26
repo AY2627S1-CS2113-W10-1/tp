@@ -9,9 +9,12 @@ import java.util.Scanner;
  * The input and output streams can be swapped out, which allows the UI to be tested with fake input.
  */
 public class Ui {
+    private static final String DIVIDER = "-".repeat(60);
+
     private final Scanner in;
 
     private final PrintStream out;
+
 
     /**
      * Creates a Ui that reads from standard input and writes to standard output.
@@ -86,6 +89,10 @@ public class Ui {
      */
     public void showError(String message) {
         out.println("Error: " + message);
+    }
+
+    public void showLine() {
+        out.println(DIVIDER);
     }
 
 }

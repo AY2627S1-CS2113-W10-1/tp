@@ -72,7 +72,7 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseList(ArgumentParser argParser) throws TripJioException {
-        argParser.checkAllowedPrefixes("c", "m", "sort", "order");
+        argParser.checkAllowedPrefixes("c", "m", "sort", "order", "trip");
         argParser.checkNoPreamble();
 
         String categoryText = argParser.getOptional("c");
@@ -89,7 +89,8 @@ public class ExpenseCommandParser {
         if (order != null && (sort == null || (!order.equals("asc") && !order.equals("desc")))) {
             throw new TripJioException("Use order/asc or order/desc together with sort/amount or sort/date.");
         }
-        return new ListCommand(category, month, sort, order == null || order.equals("desc"));
+        return new ListCommand(category, month, sort, order == null || order.equals("desc"),
+                argParser.getFlag("trip"));
     }
 
     private static Command parseEdit(ArgumentParser argParser) throws TripJioException {

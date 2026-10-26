@@ -3,6 +3,7 @@ package seedu.tripjio.command;
 import org.junit.jupiter.api.Test;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
+import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.split.SplitExpense;
@@ -56,14 +57,16 @@ class TripStatusCommandTest {
     void execute_unsetOrIncompleteTrip_showsHelpfulErrorWithoutOutput() throws TripJioException {
         TripJioException error = assertThrows(TripJioException.class, () -> on("2026-12-10").execute(state, ui));
         assertTrue(error.getMessage().contains("trip set s/START_DATE e/END_DATE"));
-        state.getTrip().loadStorageLine("start=10-12-2026");
+        Trip incomplete = new Trip();
+        incomplete.loadStorageLine("start=10-12-2026");
+        state.getTrips().importOriginal(incomplete);
         assertThrows(TripJioException.class, () -> on("2026-12-10").execute(state, ui));
         assertEquals("", output.toString());
     }
 
     @Test
     void execute_dateBoundaries_countBothEndpoints() throws TripJioException {
-        state.getTrip().set(LocalDate.of(2026, 12, 10), LocalDate.of(2026, 12, 12));
+        state.getTrips().setCurrentDates(LocalDate.of(2026, 12, 10), LocalDate.of(2026, 12, 12));
         String[] dates = {"2026-12-09", "2026-12-10", "2026-12-11", "2026-12-12", "2026-12-13"};
         String[] phases = {"Upcoming", "Ongoing", "Ongoing", "Ongoing", "Completed"};
         int[] remaining = {3, 3, 2, 1, 0};
@@ -81,11 +84,11 @@ class TripStatusCommandTest {
     @Test
     void execute_sameDayLeapDayTrip_hasOneDay() throws TripJioException {
         LocalDate leapDay = LocalDate.of(2028, 2, 29);
-        state.getTrip().set(leapDay, leapDay);
+        state.getTrips().setCurrentDates(leapDay, leapDay);
         on("2028-02-29").execute(state, ui);
         assertTrue(output.toString().contains("Duration: 1 day(s)"));
         assertTrue(output.toString().contains("Remaining trip days (including today): 1"));
-        state.getTrip().set(leapDay.minusDays(1), leapDay.plusDays(1));
+        state.getTrips().setCurrentDates(leapDay.minusDays(1), leapDay.plusDays(1));
         assertEquals(3, state.getTrip().getDurationDays());
     }
 
@@ -93,7 +96,7 @@ class TripStatusCommandTest {
     void execute_spendingIncludesEndpointsAndOnlyUserShare_withoutMutation() throws TripJioException {
         LocalDate start = LocalDate.of(2026, 12, 31);
         LocalDate end = LocalDate.of(2027, 1, 2);
-        state.getTrip().set(start, end);
+        state.getTrips().setCurrentDates(start, end);
         state.getExpenses().add(new Expense("Before", 100, Category.FOOD, start.minusDays(1)));
         state.getExpenses().add(new Expense("Start", 10.10, Category.FOOD, start));
         state.getExpenses().add(new SplitExpense("Dinner", 90, 3, null, Category.FOOD, 

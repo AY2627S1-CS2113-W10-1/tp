@@ -1,6 +1,8 @@
 package seedu.tripjio.command;
 
 import seedu.tripjio.model.AppState;
+import seedu.tripjio.exception.TripJioException;
+import seedu.tripjio.model.expense.ExpenseFilter;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.ui.Ui;
@@ -10,6 +12,8 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Lists the user's expenses, optionally filtered by category and/or month.
@@ -24,6 +28,7 @@ public class ListCommand extends Command {
     private final YearMonth month;
     private final String sort;
     private final boolean descending;
+    private final boolean tripOnly;
 
     /**
      * Creates a command to list expenses.
@@ -37,14 +42,21 @@ public class ListCommand extends Command {
 
     /** Creates a sorted view without rearranging stored expenses or their indexes. */
     public ListCommand(Category category, YearMonth month, String sort, boolean descending) {
+        this(category, month, sort, descending, false);
+    }
+
+    /** Creates a filtered/sorted view, optionally restricted to the selected trip. */
+    public ListCommand(Category category, YearMonth month, String sort, boolean descending, boolean tripOnly) {
         this.category = category;
         this.month = month;
         this.sort = sort;
         this.descending = descending;
+        this.tripOnly = tripOnly;
     }
 
     @Override
-    public void execute(AppState state, Ui ui) {
+    public void execute(AppState state, Ui ui) throws TripJioException {
+        Set<Expense> matching = new HashSet<>(ExpenseFilter.select(state, category, month, tripOnly));
         List<Expense> expenses = state.getExpenses().getAll();
         if (expenses.isEmpty()) {
             ui.showMessage("You have no expenses yet.");
@@ -54,7 +66,7 @@ public class ListCommand extends Command {
         List<String> lines = new ArrayList<>();
         List<Integer> indexes = new ArrayList<>();
         for (int i = 0; i < expenses.size(); i++) {
-            if (matches(expenses.get(i))) {
+            if (matching.contains(expenses.get(i))) {
                 indexes.add(i);
             }
         }

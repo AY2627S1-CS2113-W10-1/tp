@@ -3,6 +3,7 @@ package seedu.tripjio.parser;
 import seedu.tripjio.command.Command;
 import seedu.tripjio.command.StatsCommand;
 import seedu.tripjio.command.StatsCompareCommand;
+import seedu.tripjio.command.TripStatsCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
@@ -23,8 +24,8 @@ public class StatsCommandParser {
      */
     public static Command parse(String args) throws TripJioException {
         ArgumentParser arguments = new ArgumentParser(args);
-        arguments.checkAllowedPrefixes("m");
         boolean comparison = arguments.getPreamble().equalsIgnoreCase("compare");
+        arguments.checkAllowedPrefixes(comparison ? new String[] {"m"} : new String[] {"m", "trip"});
         if (!comparison) {
             arguments.checkNoPreamble();
         }
@@ -43,6 +44,6 @@ public class StatsCommandParser {
         }
         String text = arguments.getOptional("m");
         YearMonth month = text == null ? null : DateUtil.parseMonth(text);
-        return new StatsCommand(month);
+        return arguments.getFlag("trip") ? new TripStatsCommand(month) : new StatsCommand(month);
     }
 }

@@ -25,7 +25,7 @@ public class TripSetCommand extends Command {
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
-        state.getTrip().set(start, end);
+        state.getTrips().setCurrentDates(start, end);
         ui.showMessage("Trip set: " + DateUtil.formatDate(start) + " to " + DateUtil.formatDate(end) + ".");
     }
 

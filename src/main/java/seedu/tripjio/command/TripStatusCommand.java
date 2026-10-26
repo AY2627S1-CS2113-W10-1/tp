@@ -31,6 +31,10 @@ public class TripStatusCommand extends Command {
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
+        if (!state.getTrips().hasCurrent()) {
+            throw new TripJioException("No trip selected. Use trip list, then trip select INDEX; "
+                    + "if no trips exist, use trip set s/START_DATE e/END_DATE.");
+        }
         Trip trip = state.getTrip();
         LocalDate today = LocalDate.now(clock);
         // Validate the trip before printing anything or accessing its dates for spending calculations.

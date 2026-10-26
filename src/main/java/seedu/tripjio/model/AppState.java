@@ -25,13 +25,14 @@ public class AppState {
     public AppState() {
         this.expenses = new ExpenseList();
         this.budget = new Budget();
-        this.trips = new TripBook(new Trip());
+        this.trips = new TripBook();
     }
 
     public AppState(ExpenseList expenses, Budget budget, Trip trip) {
         this.expenses = expenses;
         this.budget = budget;
-        this.trips = new TripBook(trip);
+        this.trips = new TripBook();
+        this.trips.importOriginal(trip);
     }
 
     public ExpenseList getExpenses() {
@@ -42,6 +43,7 @@ public class AppState {
         return budget;
     }
 
+    /** Returns the selected trip, or null if none is selected; callers must check hasCurrent first. */
     public Trip getTrip() {
         return trips.getCurrent();
     }

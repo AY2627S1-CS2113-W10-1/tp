@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Verifies comparison validation, ordered changes, month boundaries and read-only behaviour. */
 class StatsCompareCommandTest {
+    /** Horizontal rule as wide as the comparison table. */
+    private static final String LINE = "-".repeat(63);
+
     private final AppState state = new AppState();
     private final ByteArrayOutputStream output = new ByteArrayOutputStream();
     private final Ui ui = new Ui(new ByteArrayInputStream(new byte[0]), new PrintStream(output));
@@ -63,19 +66,21 @@ class StatsCompareCommandTest {
         state.getExpenses().add(new Expense("Other year", 999, Category.FOOD, LocalDate.of(2027, 2, 1)));
         Parser.parse("stats compare m/01-2028 m/02-2028").execute(state, ui);
         assertEquals("Spending comparison: January 2028 -> February 2028\n"
-                + "Category: first month -> second month (change: second minus first)\n"
-                + "Food: $10.10 -> $30.20 (change: +$20.10)\n"
-                + "Transport: $12.50 -> $0.00 (change: -$12.50)\n"
-                + "Accommodation: $0.00 -> $0.00 (change: $0.00)\n"
-                + "Entertainment: $0.00 -> $0.00 (change: $0.00)\n"
-                + "Shopping: $0.00 -> $0.00 (change: $0.00)\n"
-                + "Other: $0.00 -> $0.00 (change: $0.00)\n"
-                + "==============================\n"
-                + "TOTAL SPENT: $22.60 -> $30.20 (change: +$7.60)\n"
-                + "==============================\n", output.toString().replace("\r\n", "\n"));
+                + row("Category", "Jan 2028", "Feb 2028", "Change") + "\n"
+                + LINE + "\n"
+                + row("Food", "$10.10", "$30.20", "+$20.10") + "\n"
+                + row("Transport", "$12.50", "$0.00", "-$12.50") + "\n"
+                + row("Accommodation", "$0.00", "$0.00", "$0.00") + "\n"
+                + row("Entertainment", "$0.00", "$0.00", "$0.00") + "\n"
+                + row("Shopping", "$0.00", "$0.00", "$0.00") + "\n"
+                + row("Other", "$0.00", "$0.00", "$0.00") + "\n"
+                + LINE + "\n"
+                + row("Total", "$22.60", "$30.20", "+$7.60") + "\n", output.toString().replace("\r\n", "\n"));
+        assertTrue(output.toString().contains(
+                "Food" + " ".repeat(21) + "$10.10" + " ".repeat(10) + "$30.20" + " ".repeat(9) + "+$20.10"));
         assertEquals(6, state.getExpenses().size());
         assertEquals(22.60, state.getExpenses().getTotalSpentInMonth(YearMonth.of(2028, 1)));
-        assertFalse(state.getTrip().isSet());
+        assertFalse(state.getTrips().hasCurrent());
     }
 
     @Test
@@ -83,7 +88,7 @@ class StatsCompareCommandTest {
         state.getExpenses().add(new Expense("Food", 5, Category.FOOD, LocalDate.of(2027, 1, 1)));
         Parser.parse("stats compare m/01-2027 m/12-2026").execute(state, ui);
         assertTrue(output.toString().contains("January 2027 -> December 2026"));
-        assertTrue(output.toString().contains("TOTAL SPENT: $5.00 -> $0.00 (change: -$5.00)"));
+        assertTrue(output.toString().contains(row("Total", "$5.00", "$0.00", "-$5.00")));
         assertFalse(output.toString().contains("No expenses"));
     }
 
@@ -91,7 +96,7 @@ class StatsCompareCommandTest {
     void execute_sameMonth_zeroChange() throws TripJioException {
         state.getExpenses().add(new Expense("Food", 0.10, Category.FOOD, LocalDate.of(2026, 10, 1)));
         Parser.parse("stats compare m/10-2026 m/10-2026").execute(state, ui);
-        assertTrue(output.toString().contains("TOTAL SPENT: $0.10 -> $0.10 (change: $0.00)"));
+        assertTrue(output.toString().contains(row("Total", "$0.10", "$0.10", "$0.00")));
         assertFalse(output.toString().contains("-$0.00"));
     }
 
@@ -99,10 +104,26 @@ class StatsCompareCommandTest {
     void execute_emptyMonths_showsZeroAndMessage() throws TripJioException {
         Parser.parse("stats compare m/01-2026 m/12-2027").execute(state, ui);
         for (Category category : Category.values()) {
-            assertTrue(output.toString().contains(category.getDisplayName() + ": $0.00 -> $0.00 (change: $0.00)"));
+            assertTrue(output.toString().contains(row(category.getDisplayName(), "$0.00", "$0.00", "$0.00")));
         }
-        assertTrue(output.toString().contains("TOTAL SPENT: $0.00 -> $0.00 (change: $0.00)"));
+        assertTrue(output.toString().contains(row("Total", "$0.00", "$0.00", "$0.00")));
         assertTrue(output.toString().contains("No expenses recorded for either month."));
+    }
+
+    @Test
+    void execute_largeTotals_columnsStayAligned() throws TripJioException {
+        // 12 expenses of the maximum $1,000,000 give "-$12,000,000.00", which fills a whole 15-character column.
+        for (int day = 1; day <= 12; day++) {
+            state.getExpenses().add(new Expense("Flight", 1_000_000, Category.TRANSPORT, LocalDate.of(2026, 1, day)));
+        }
+        Parser.parse("stats compare m/01-2026 m/02-2026").execute(state, ui);
+        String[] lines = output.toString().replace("\r\n", "\n").split("\n");
+        // Every line after the title belongs to the table: 4 columns x 15 characters + 3 separating spaces.
+        for (int i = 1; i < lines.length; i++) {
+            assertEquals(63, lines[i].length(), lines[i]);
+        }
+        assertTrue(output.toString().contains(row("Total", "$12,000,000.00", "$0.00", "-$12,000,000.00")));
+        assertTrue(output.toString().contains("$0.00 -$12,000,000.00"));
     }
 
     @Test
@@ -110,5 +131,10 @@ class StatsCompareCommandTest {
         YearMonth month = YearMonth.of(2026, 10);
         assertThrows(NullPointerException.class, () -> new StatsCompareCommand(null, month));
         assertThrows(NullPointerException.class, () -> new StatsCompareCommand(month, null));
+    }
+
+    /** Builds one expected table row with the same column widths as the command. */
+    private static String row(String label, String first, String second, String change) {
+        return String.format("%-15s %15s %15s %15s", label, first, second, change);
     }
 }

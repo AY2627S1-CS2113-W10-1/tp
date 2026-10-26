@@ -65,6 +65,11 @@ public class Trip {
         return end;
     }
 
+    /** Returns whether a date falls within this complete trip, including both endpoints. */
+    public boolean contains(LocalDate date) {
+        return isSet() && date != null && !date.isBefore(start) && !date.isAfter(end);
+    }
+
     /**
      * Returns the trip duration including both the first and last days.
      *

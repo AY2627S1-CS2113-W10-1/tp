@@ -55,6 +55,7 @@ public class TripJio {
             } catch (TripJioException e) {
                 ui.showError(e.getMessage());
             }
+            ui.showLine();
         }
     }
 
