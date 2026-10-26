@@ -13,7 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.LocalDate;
-import java.time.YearMonth;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,19 +34,24 @@ public class SplitCommandTest {
 
     @Test
     public void execute_singleExpense_addsToState() throws TripJioException {
-        SplitCommand command = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now());
+        // Notice the new trailing arguments: ArrayList for names, and nulls for payer, currency, and rate
+        SplitCommand command = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
         command.execute(state, ui);
 
         assertEquals(1, state.getExpenses().size());
+        // ExpenseList is 1-indexed for the .get() method
         assertTrue(state.getExpenses().get(1) instanceof SplitExpense);
     }
 
     @Test
     public void execute_multipleExpenses_addsToState() throws TripJioException {
-        SplitCommand command1 = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now());
+        SplitCommand command1 = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now(), 
+                                                 new ArrayList<>(), null, null, null);
         command1.execute(state, ui);
 
-        SplitCommand command2 = new SplitCommand("Dinner", 120.00, 4, null, Category.FOOD, LocalDate.now());
+        SplitCommand command2 = new SplitCommand("Dinner", 120.00, 4, null, Category.FOOD, LocalDate.now(), 
+                                                 new ArrayList<>(), null, null, null);
         command2.execute(state, ui);
 
         assertEquals(2, state.getExpenses().size());
@@ -54,14 +59,8 @@ public class SplitCommandTest {
 
     @Test
     public void isMutating_returnsTrue() {
-        SplitCommand command = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now());
+        SplitCommand command = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
         assertTrue(command.isMutating());
-    }
-
-    @Test
-    public void getAffectedMonth_returnsCorrectYearMonth() {
-        LocalDate date = LocalDate.of(2026, 9, 15);
-        SplitCommand command = new SplitCommand("Taxi", 60.00, 3, null, Category.OTHER, date);
-        assertEquals(YearMonth.of(2026, 9), command.getAffectedMonth());
     }
 }

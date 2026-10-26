@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,9 +60,9 @@ class StatsCommandTest {
     void execute_monthFilterAndSplitShares_correctTotalsAndOrder() throws TripJioException {
         state.getExpenses().add(new Expense("First day", 0.10, Category.FOOD, LocalDate.of(2028, 2, 1)));
         state.getExpenses().add(new Expense("Leap day", 0.20, Category.FOOD, LocalDate.of(2028, 2, 29)));
-        state.getExpenses().add(new SplitExpense("Equal", 90, 3, null, Category.FOOD, LocalDate.of(2028, 2, 15)));
+        state.getExpenses().add(new SplitExpense("Equal", 90, 3, null, Category.FOOD, LocalDate.of(2028, 2, 15), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new SplitExpense("Custom", 100, 4, 12.50,
-                Category.TRANSPORT, LocalDate.of(2028, 2, 16)));
+                Category.TRANSPORT, LocalDate.of(2028, 2, 16), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new Expense("Before", 500, Category.FOOD, LocalDate.of(2028, 1, 31)));
         state.getExpenses().add(new Expense("After", 500, Category.FOOD, LocalDate.of(2028, 3, 1)));
         state.getExpenses().add(new Expense("Other year", 500, Category.FOOD, LocalDate.of(2027, 2, 1)));

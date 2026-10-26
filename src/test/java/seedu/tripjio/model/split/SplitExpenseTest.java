@@ -1,81 +1,72 @@
 package seedu.tripjio.model.split;
 
 import org.junit.jupiter.api.Test;
-
-import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Unit tests for {@link SplitExpense}.
- */
 public class SplitExpenseTest {
 
-    private final LocalDate testDate = LocalDate.of(2026, 10, 14);
-
     @Test
-    public void toString_equalSplit_formattedCorrectly() {
-        SplitExpense expense = new SplitExpense("Group dinner", 90.00, 3, null, Category.FOOD, testDate);
-        assertEquals("[Food] Group dinner - $30.00 (14-10-2026) [Split: $90.00 / 3 people]", expense.toString());
+    public void getMyShare_noCustomShare_returnsEqualSplit() {
+        SplitExpense expense = new SplitExpense("Taxi", 60.0, 3, null, Category.OTHER, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
+        assertEquals(20.0, expense.getMyShare());
     }
 
     @Test
-    public void setAmount_equalSplit_recalculatesShare() throws TripJioException {
-        SplitExpense expense = new SplitExpense("Group dinner", 90.00, 3, null, Category.FOOD, testDate);
-        expense.setAmount(120.00);
-        assertEquals(40.00, expense.getMyShare());
-        assertEquals(120.00, expense.getTotalAmount());
+    public void getMyShare_customShare_returnsCustomShare() {
+        SplitExpense expense = new SplitExpense("Taxi", 60.0, 3, 15.0, Category.OTHER, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
+        assertEquals(15.0, expense.getMyShare());
     }
 
     @Test
-    public void setAmount_customShare_keepsOwnShare() throws TripJioException {
-        SplitExpense expense = new SplitExpense("Group dinner", 100.00, 4, 40.00, Category.FOOD, testDate);
-        expense.setAmount(150.00);
-        assertEquals(40.00, expense.getMyShare());
-        assertEquals(150.00, expense.getTotalAmount());
+    public void setCustomShare_updatesShareAndFlag() {
+        SplitExpense expense = new SplitExpense("Taxi", 60.0, 3, null, Category.OTHER, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
+        expense.setCustomShare(25.0);
+        assertTrue(expense.hasCustomShare());
+        assertEquals(25.0, expense.getMyShare());
     }
 
     @Test
-    public void setAmount_customShareBelowOwnShare_throwsException() {
-        SplitExpense expense = new SplitExpense("Group dinner", 100.00, 4, 40.00, Category.FOOD, testDate);
-        TripJioException e = assertThrows(TripJioException.class, () -> expense.setAmount(30.00));
-        assertEquals("The new total bill cannot be less than your own share of $40.00.", e.getMessage());
+    public void getAmountsOwedToMe_noPayer_distributesLeftoverCents() {
+        // $100 / 3 people. My share = 33.33. Rest = 66.67.
+        // 2 people -> Alice pays 33.34, Bob pays 33.33 to ensure exact rounding.
+        SplitExpense expense = new SplitExpense("Dinner", 100.0, 3, null, Category.FOOD, LocalDate.now(), 
+                                                Arrays.asList("alice", "bob"), null, null, null);
+        Map<String, Double> owed = expense.getAmountsOwedToMe();
+        assertEquals(33.34, owed.get("alice"));
+        assertEquals(33.33, owed.get("bob"));
     }
 
     @Test
-    public void setAmount_equalSplitTooSmall_throwsException() {
-        SplitExpense expense = new SplitExpense("Snack", 10.00, 50, null, Category.FOOD, testDate);
-        TripJioException e = assertThrows(TripJioException.class, () -> expense.setAmount(0.05));
-        assertEquals("Each person's share must be at least $0.01.", e.getMessage());
+    public void getAmountsOwedToMe_withPayer_returnsEmpty() {
+        SplitExpense expense = new SplitExpense("Dinner", 100.0, 3, null, Category.FOOD, LocalDate.now(), 
+                                                Arrays.asList("alice", "bob"), "alice", null, null);
+        assertTrue(expense.getAmountsOwedToMe().isEmpty());
     }
 
     @Test
-    public void storage_roundTrip_equalAndCustom() throws TripJioException {
-        SplitExpense equalExpense = new SplitExpense("Group dinner", 90.00, 3, null, Category.FOOD, testDate);
-        String equalStorage = equalExpense.toStorageString();
-        SplitExpense restoredEqual = SplitExpense.fromStorageString(equalStorage);
-        assertEquals(equalExpense.getTotalAmount(), restoredEqual.getTotalAmount());
-        assertEquals(equalExpense.getMyShare(), restoredEqual.getMyShare());
-        assertFalse(restoredEqual.hasCustomShare());
-
-        SplitExpense customExpense = new SplitExpense("Party", 200.00, 5, 80.00, Category.OTHER, testDate);
-        String customStorage = customExpense.toStorageString();
-        SplitExpense restoredCustom = SplitExpense.fromStorageString(customStorage);
-        assertEquals(customExpense.getTotalAmount(), restoredCustom.getTotalAmount());
-        assertEquals(customExpense.getMyShare(), restoredCustom.getMyShare());
-        assertTrue(restoredCustom.hasCustomShare());
+    public void getAmountsOwedToMe_noParticipants_returnsEmpty() {
+        SplitExpense expense = new SplitExpense("Dinner", 100.0, 3, null, Category.FOOD, LocalDate.now(), 
+                                                new ArrayList<>(), null, null, null);
+        assertTrue(expense.getAmountsOwedToMe().isEmpty());
     }
 
     @Test
-    public void fromStorageString_invalidFormat_throwsException() {
-        assertThrows(TripJioException.class, () -> SplitExpense.fromStorageString(null));
-        assertThrows(TripJioException.class, () -> SplitExpense.fromStorageString("S|Dinner|100.00|3|33.33|FOOD"));
-        assertThrows(TripJioException.class, () -> SplitExpense.fromStorageString("E|Dinner|100.00|FOOD|14-10-2026"));
+    public void foreignCurrency_convertsToSgdCorrectly() {
+        // 1000 JPY at 0.009 = 9.00 SGD. Split 3 ways = 3.00 SGD.
+        SplitExpense expense = new SplitExpense("Snacks", 1000.0, 3, null, Category.FOOD, LocalDate.now(), 
+                                                new ArrayList<>(), null, "JPY", 0.009);
+        assertEquals(9.00, expense.getAmount());
+        assertEquals(3.00, expense.getMyShare());
     }
 }

@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -45,7 +46,7 @@ class ExpenseCommandsTest {
         state.getExpenses().add(new Expense("Lunch", 12.50, Category.FOOD, LocalDate.of(2026, 10, 15)));
         state.getExpenses().add(new Expense("Metro card", 45, Category.TRANSPORT, LocalDate.of(2026, 10, 2)));
         state.getExpenses().add(new SplitExpense("Group dinner", 90, 3, null, Category.FOOD,
-                LocalDate.of(2026, 9, 14)));
+                LocalDate.of(2026, 9, 14), new ArrayList<>(), null, null, null));
     }
 
     @Test
