@@ -21,12 +21,22 @@ public class TripJio {
     private final AppState state;
 
     /**
-     * Creates the application and loads the user's data from the given file.
+     * Creates the application that reads from the keyboard and loads data from the given file.
      *
      * @param filePath Path of the data file.
      */
     public TripJio(String filePath) {
-        this.ui = new Ui();
+        this(filePath, new Ui());
+    }
+
+    /**
+     * Creates the application with the given UI, so tests can supply fake input and capture the output.
+     *
+     * @param filePath Path of the data file.
+     * @param ui UI used for all input and output.
+     */
+    public TripJio(String filePath, Ui ui) {
+        this.ui = ui;
         this.storage = new Storage(filePath);
         this.state = storage.load(ui);
     }
