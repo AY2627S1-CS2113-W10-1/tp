@@ -1,5 +1,35 @@
 # TripJio - User Guide
 
+## Selected-trip filtering
+
+```text
+list trip/
+list trip/ c/food m/10-2026 sort/amount order/desc
+stats trip/
+stats m/10-2026 trip/
+split list trip/ m/10-2026
+```
+
+`trip/` is a flag with no value, allowed once on list, stats and split list.
+It uses the currently selected trip's inclusive start/end dates. Select a trip
+with `trip select INDEX` first. If none is selected, the command reports an error,
+even if there are no expenses. `trip/1`, repeated flags and extra text are invalid.
+
+Filters intersect: an expense must match the trip dates and any supplied month
+or category. List sorting still works and keeps original expense indexes.
+Split list shows only split bills. Reports use SGD amounts and your split share.
+`stats trip/` covers the whole trip, including trips spanning several months;
+`stats m/MM-YYYY trip/` covers only that month's portion. Unfiltered `stats`
+still defaults to the current month. `stats compare` does not accept `trip/`.
+
+Trip statistics starts with `Spending for trip NAME:`, or
+`Spending for trip NAME in MONTH YEAR:` when a month is supplied. All six category
+rows and TOTAL SPENT follow the existing statistics format. An empty intersection
+shows zeros and `No expenses match the selected trip filter.`
+List and split list use their existing empty-filter messages.
+Filtering is read-only, does not assign expenses to trips, and does not change
+budgets, saved data or the selected trip. Overlapping trips can include the same expense.
+
 ## New: sorting, manual exchange rates and multiple trips
 
 All existing amounts and budgets are interpreted as **SGD**. Reports continue to
@@ -58,9 +88,41 @@ Adding a trip selects it automatically. Names must be non-empty and unique
 (case-insensitive), and cannot contain `/`, `|` or line breaks.
 `trip list` shows indexes and a selected marker. `trip select INDEX` saves the
 selection. `trip set` updates only the selected trip's dates; it does not erase
-other trips. With no named trips, the original `trip set` workflow still works.
-When adding the first named trip, an existing unnamed trip is retained as
-`Original trip`. There is no trip deletion command in this version.
+other trips. With no trips, `trip set` creates and selects `Original trip`.
+If trips exist but none is selected, `trip set` and `trip status` report:
+`No trip selected` and explain how to select one. Use `trip list`, then
+`trip select INDEX`; the application never chooses a trip silently.
+### Editing and deleting trips
+
+```text
+trip edit 1 n/Tokyo
+trip edit 1 s/01-12-2026 e/15-12-2026
+trip delete 1
+```
+
+`trip edit INDEX [n/NAME] [s/START_DATE] [e/END_DATE]` requires at least one field.
+Omitted fields stay unchanged. Dates use DD-MM-YYYY; the final combined date range
+must be valid, including when only one endpoint changes. Names follow trip add's
+rules and must be unique ignoring case, except that a trip may keep its own name
+or change only its capitalisation. Invalid edits leave all fields unchanged.
+Editing does not select the trip. Success prints `Updated trip 1.` for index 1.
+
+`trip delete INDEX` accepts no other parameters and deletes immediately.
+Deleting the selected trip leaves **no trip selected**, even if others remain.
+Deleting an earlier trip shifts the selected index down while preserving the
+same selection. Remaining trips are renumbered; use `trip list` before the next
+edit/delete. If Japan was selected, deleting it prints:
+
+```text
+Deleted trip: Japan. Expenses are unchanged.
+No trip selected. Use trip list and trip select INDEX, or add a new trip.
+```
+
+If another trip remains selected, the second line is `Selected trip: NAME.`
+Both commands save automatically. Neither deletes or edits expenses or monthly
+budgets. Editing trip dates changes the date range used for trip spending.
+After deleting every trip, restart still shows no trips; `trip set` can create a
+new Original trip. There is no undo command, so back up data before deleting.
 
 Trip spending still includes all expenses within the selected trip's dates,
 including both boundaries. Expenses are **not assigned exclusively to trips**:
@@ -70,6 +132,13 @@ overlapping trips can count the same expense. Selecting a trip does not filter
 ### Saved-data compatibility
 
 Existing `E|` and `S|` expenses and the legacy `[trip]` section still load.
+An old file containing only `[trip]` migrates its complete dates to a selected
+`Original trip`. If `[trips]` is present, it is authoritative and the old
+`[trip]` copy is ignored, even when `[trips]` is empty or invalid.
+New saves write only `[trips]`, never `[trip]`.
+Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
+one of them; no `A|` line means no trip selected. Invalid selection names produce
+a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
@@ -315,7 +384,9 @@ Whenever you add or edit an expense, TripJio automatically evaluates your spendi
 ### 4. Trip Dates & Management
 
 #### Setting Trip Dates: `trip set`
-Configures the start and end dates of your current trip. Setting new dates replaces any previously saved trip.
+Updates the selected trip's dates without changing other trips. With an empty trip
+list it creates and selects Original trip. If trips exist but none is selected,
+use `trip select INDEX` first.
 
 * **Format**: `trip set s/START_DATE e/END_DATE`
 * **Parameters**:
@@ -426,9 +497,9 @@ E|Museum ticket|15.00|ENTERTAINMENT|12-10-2026
 default=1000.00
 12-2026=1500.00
 
-[trip]
-start=10-12-2026
-end=24-12-2026
+[trips]
+T|Original trip|10-12-2026|24-12-2026
+A|Original trip
 ```
 
 * **UTF-8 Encoding**: File content is encoded in UTF-8, so international characters (e.g. `Phở`, `Café`) are preserved across platforms.
@@ -442,7 +513,10 @@ end=24-12-2026
 **A:** Simply copy the `data/tripjio.txt` file from your current TripJio folder to the `data/` folder on your other computer.
 
 **Q: Can I manually edit `data/tripjio.txt`?**  
-**A:** Yes, you can edit the file in any text editor. Ensure you follow the block structure (`[expense]`, `[budget]`, `[trip]`) and date formats (`DD-MM-YYYY` for dates, `MM-YYYY` for budgets). If any line contains invalid syntax, TripJio will skip that line with a warning upon launch while preserving the rest.
+**A:** Yes, but back up the file first. Current sections include `[expense]`,
+`[budget]`, `[trips]` and `[rates]`. Use `DD-MM-YYYY` for dates and `MM-YYYY`
+for budgets. Invalid records produce warnings; invalid selected-trip names leave
+no trip selected. The old `[trip]` section is used only when `[trips]` is absent.
 
 ---
 

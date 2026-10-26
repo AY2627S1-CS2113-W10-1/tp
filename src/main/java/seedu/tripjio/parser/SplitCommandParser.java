@@ -23,10 +23,10 @@ public class SplitCommandParser {
         ArgumentParser p = new ArgumentParser(args);
 
         if ("list".equals(p.getPreamble())) {
-            p.checkAllowedPrefixes("m");
+            p.checkAllowedPrefixes("m", "trip");
             String monthText = p.getOptional("m");
             YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);
-            return new SplitListCommand(month);
+            return new SplitListCommand(month, p.getFlag("trip"));
         }
 
         p.checkNoPreamble();

@@ -61,6 +61,20 @@ public class ExpenseList {
         return new ArrayList<>(expenses);
     }
 
+    /** Returns a fresh, insertion-ordered list within inclusive dates; does not alter stored indexes. */
+    public List<Expense> getExpensesBetween(LocalDate start, LocalDate end) {
+        if (start == null || end == null || end.isBefore(start)) {
+            throw new IllegalArgumentException("A valid start and end date are required.");
+        }
+        List<Expense> result = new ArrayList<>();
+        for (Expense expense : expenses) {
+            if (!expense.getDate().isBefore(start) && !expense.getDate().isAfter(end)) {
+                result.add(expense);
+            }
+        }
+        return result;
+    }
+
     /**
      * Returns the total amount the user spent in the given month.
      * Split expenses count only the user's share. The total is rounded to cents, so small floating-point

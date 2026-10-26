@@ -78,13 +78,13 @@ class ExpenseCommandsTest {
     }
 
     @Test
-    void list_noExpenses_showsMessage() {
+    void list_noExpenses_showsMessage() throws TripJioException {
         new ListCommand(null, null).execute(state, ui);
         assertEquals("You have no expenses yet.\n", getOutput());
     }
 
     @Test
-    void list_noFilter_showsAllWithTotalOfUserShare() {
+    void list_noFilter_showsAllWithTotalOfUserShare() throws TripJioException {
         addSampleExpenses();
         new ListCommand(null, null).execute(state, ui);
 
@@ -95,7 +95,7 @@ class ExpenseCommandsTest {
     }
 
     @Test
-    void list_withFilters_keepsOriginalIndexes() {
+    void list_withFilters_keepsOriginalIndexes() throws TripJioException {
         addSampleExpenses();
         new ListCommand(Category.FOOD, YearMonth.of(2026, 9)).execute(state, ui);
 
@@ -106,7 +106,7 @@ class ExpenseCommandsTest {
     }
 
     @Test
-    void list_filterMatchesNothing_showsMessage() {
+    void list_filterMatchesNothing_showsMessage() throws TripJioException {
         addSampleExpenses();
         new ListCommand(Category.SHOPPING, null).execute(state, ui);
         assertEquals("No expenses match the given filter.\n", getOutput());

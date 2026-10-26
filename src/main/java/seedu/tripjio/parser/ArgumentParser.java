@@ -25,7 +25,8 @@ public class ArgumentParser {
      * {@code dt} and {@code my} come before {@code d} and {@code m},
      * so that "dt/" is not read as "d/" followed by "t/".
      */
-    private static final Pattern PREFIX = Pattern.compile("(?:^|\\s)(sort|order|cur|from|to|r|dt|my|d|a|c|m|s|e|n)/");
+    private static final Pattern PREFIX =
+            Pattern.compile("(?:^|\\s)(trip|sort|order|cur|from|to|r|dt|my|d|a|c|m|s|e|n)/");
 
     /** A positive number with at most 2 decimal places, e.g. "12" or "12.50". */
     private static final Pattern AMOUNT_FORMAT = Pattern.compile("^\\d+(\\.\\d{1,2})?$");
@@ -74,6 +75,18 @@ public class ArgumentParser {
 
     public boolean has(String prefix) {
         return values.containsKey(prefix);
+    }
+
+    /** Reads a valueless flag, rejecting repeated occurrences or attached text. */
+    public boolean getFlag(String prefix) throws TripJioException {
+        List<String> entries = getAll(prefix);
+        if (entries.isEmpty()) {
+            return false;
+        }
+        if (entries.size() != 1 || !entries.get(0).isEmpty()) {
+            throw new TripJioException(prefix + "/ must appear once and have no value.");
+        }
+        return true;
     }
 
     /** Rejects recognised prefixes that are not supported by the current command. */

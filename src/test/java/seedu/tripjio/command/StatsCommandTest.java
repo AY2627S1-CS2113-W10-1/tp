@@ -71,7 +71,7 @@ class StatsCommandTest {
                 + "==============================\nTOTAL SPENT: $42.80\n"
                 + "==============================\n", output.toString().replace("\r\n", "\n"));
         assertEquals(7, state.getExpenses().size());
-        assertFalse(state.getTrip().isSet());
+        assertFalse(state.getTrips().hasCurrent());
     }
 
     @Test

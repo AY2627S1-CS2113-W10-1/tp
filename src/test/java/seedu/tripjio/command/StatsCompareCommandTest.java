@@ -78,7 +78,7 @@ class StatsCompareCommandTest {
                 "Food" + " ".repeat(21) + "$10.10" + " ".repeat(10) + "$30.20" + " ".repeat(9) + "+$20.10"));
         assertEquals(6, state.getExpenses().size());
         assertEquals(22.60, state.getExpenses().getTotalSpentInMonth(YearMonth.of(2028, 1)));
-        assertFalse(state.getTrip().isSet());
+        assertFalse(state.getTrips().hasCurrent());
     }
 
     @Test
