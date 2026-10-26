@@ -5,11 +5,14 @@ import seedu.tripjio.model.expense.ExpenseList;
 import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.model.trip.TripBook;
 import seedu.tripjio.model.expense.ExchangeRates;
+import seedu.tripjio.model.split.Settlement;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Holds all of the user's data (expenses, budgets and the current trip) so it can be passed to commands
- * and to storage as one object. There are no setters: to change the data, call the methods of the
- * object returned by a getter, e.g. {@code state.getBudget().setDefault(1000)}.
+ * and to storage as one object.
  */
 public class AppState {
 
@@ -17,6 +20,7 @@ public class AppState {
     private final Budget budget;
     private final TripBook trips;
     private final ExchangeRates exchangeRates = new ExchangeRates();
+    private final List<Settlement> settlements = new ArrayList<>();
 
     public AppState() {
         this.expenses = new ExpenseList();
@@ -48,5 +52,9 @@ public class AppState {
 
     public ExchangeRates getExchangeRates() {
         return exchangeRates;
+    }
+
+    public List<Settlement> getSettlements() {
+        return settlements;
     }
 }

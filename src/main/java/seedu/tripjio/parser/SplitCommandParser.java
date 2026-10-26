@@ -10,6 +10,8 @@ import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Parses input arguments and creates a new SplitCommand or SplitListCommand object.
@@ -30,7 +32,7 @@ public class SplitCommandParser {
         }
 
         p.checkNoPreamble();
-        p.checkAllowedPrefixes("d", "a", "n", "my", "c", "dt");
+        p.checkAllowedPrefixes("d", "a", "n", "my", "c", "dt", "p", "paid", "cur", "rate");
 
         String description = ArgumentParser.parseDescription(p.getRequired("d"));
         double amount = ArgumentParser.parseAmount(p.getRequired("a"));
@@ -62,7 +64,42 @@ public class SplitCommandParser {
             }
         }
 
-        return new SplitCommand(description, amount, people, myShare, category, date);
+        String namesStr = p.getOptional("p");
+        List<String> participants = new ArrayList<>();
+        if (namesStr != null && !namesStr.trim().isEmpty()) {
+            for (String name : namesStr.split(",")) {
+                participants.add(name.trim());
+            }
+        }
+
+        String payer = p.getOptional("paid");
+        if (payer != null) {
+            payer = payer.trim();
+        }
+
+        String currency = p.getOptional("cur");
+        if (currency != null) {
+            currency = currency.trim().toUpperCase();
+        }
+
+        Double rate = null;
+        if (p.has("rate")) {
+            try {
+                rate = Double.parseDouble(p.getRequired("rate"));
+                if (rate <= 0) {
+                    throw new TripJioException("Exchange rate must be strictly positive.");
+                }
+            } catch (NumberFormatException e) {
+                throw new TripJioException("Invalid exchange rate format.");
+            }
+        }
+
+        if (currency != null && rate == null) {
+            throw new TripJioException("You must provide an exchange rate (rate/) when specifying a foreign currency (cur/).");
+        }
+
+        return new SplitCommand(description, amount, people, myShare, category, date, 
+                                participants, payer, currency, rate);
     }
 
     private static int parseNumberOfPeople(String text) throws TripJioException {
@@ -72,7 +109,7 @@ public class SplitCommandParser {
                 return people;
             }
         } catch (NumberFormatException e) {
-            // Fall through to throw exception below
+            // Fall through to throw exception
         }
         throw new TripJioException("Number of people must be between 2 and 50.");
     }

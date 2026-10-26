@@ -7,37 +7,48 @@ import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.ui.Ui;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
+import java.util.List;
 
-/**
- * Adds a split expense shared among multiple people to the expense list.
- */
 public class SplitCommand extends Command {
     private final String description;
-    private final double totalAmount;
+    private final double amount;
     private final int numberOfPeople;
     private final Double customShare;
     private final Category category;
     private final LocalDate date;
-    private final YearMonth affectedMonth;
+    private final List<String> participantNames;
+    private final String payerName;
+    private final String currency;
+    private final Double exchangeRate;
 
-    public SplitCommand(String description, double totalAmount, int numberOfPeople,
-                        Double customShare, Category category, LocalDate date) {
+    public SplitCommand(String description, double amount, int numberOfPeople, Double customShare,
+                        Category category, LocalDate date, List<String> participantNames,
+                        String payerName, String currency, Double exchangeRate) {
         this.description = description;
-        this.totalAmount = totalAmount;
+        this.amount = amount;
         this.numberOfPeople = numberOfPeople;
         this.customShare = customShare;
         this.category = category;
         this.date = date;
-        this.affectedMonth = YearMonth.from(date);
+        this.participantNames = participantNames;
+        this.payerName = payerName;
+        this.currency = currency;
+        this.exchangeRate = exchangeRate;
     }
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
-        SplitExpense expense = new SplitExpense(description, totalAmount, numberOfPeople,
-                customShare, category, date);
-        state.getExpenses().add(expense);
+        if (participantNames != null && !participantNames.isEmpty() && participantNames.size() != numberOfPeople - 1) {
+            throw new TripJioException("Number of names in p/ must be exactly n - 1.");
+        }
+        if (payerName != null && !participantNames.contains(payerName.toLowerCase())) {
+            throw new TripJioException("Payer specified in paid/ must be included in the p/ list.");
+        }
 
+        SplitExpense expense = new SplitExpense(description, amount, numberOfPeople, customShare, 
+                                                category, date, participantNames, payerName, currency, exchangeRate);
+        state.getExpenses().add(expense);
+        
         int count = state.getExpenses().size();
         String expenseWord = (count == 1) ? "expense" : "expenses";
 
@@ -47,12 +58,7 @@ public class SplitCommand extends Command {
     }
 
     @Override
-    public boolean isMutating() {
-        return true;
-    }
-
-    @Override
-    public YearMonth getAffectedMonth() {
-        return affectedMonth;
+    public boolean isMutating() { 
+        return true; 
     }
 }
