@@ -116,7 +116,8 @@ class ExpenseCommandsTest {
     @Test
     void edit_someFields_onlyThoseChanged() throws TripJioException {
         addSampleExpenses();
-        EditCommand command = new EditCommand(1, null, 13.20, null, LocalDate.of(2026, 11, 1));
+        // Updated to pass null for the customShare field
+        EditCommand command = new EditCommand(1, null, 13.20, null, LocalDate.of(2026, 11, 1), null);
         command.execute(state, ui);
 
         Expense edited = state.getExpenses().get(1);
@@ -131,7 +132,8 @@ class ExpenseCommandsTest {
     @Test
     void edit_invalidIndex_throws() {
         addSampleExpenses();
-        EditCommand command = new EditCommand(9, "Dinner", null, null, null);
+        // Updated to pass null for the customShare field
+        EditCommand command = new EditCommand(9, "Dinner", null, null, null, null);
         assertThrows(TripJioException.class, () -> command.execute(state, ui));
         assertNull(command.getAffectedMonth());
     }

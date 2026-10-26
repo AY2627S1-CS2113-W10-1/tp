@@ -6,6 +6,7 @@ import seedu.tripjio.model.budget.Budget;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.expense.ExpenseList;
 import seedu.tripjio.model.expense.ForeignExpense;
+import seedu.tripjio.model.split.Settlement;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.ui.Ui;
@@ -29,6 +30,7 @@ public class Storage {
     private static final String TRIP_HEADER = "[trip]";
     private static final String TRIPS_HEADER = "[trips]";
     private static final String RATES_HEADER = "[rates]";
+    private static final String OWE_HEADER = "[owe]";
 
     /** Start of an expense line for a normal expense, e.g. "E|Lunch|12.50|FOOD|15-10-2026". */
     private static final String EXPENSE_TAG = "E|";
@@ -92,10 +94,17 @@ public class Storage {
                     state.getTrips().loadStorageLine(line);
                 } else if (RATES_HEADER.equals(section)) {
                     state.getExchangeRates().loadStorageLine(line);
+                } else if (OWE_HEADER.equals(section)) {
+                    String[] parts = line.split("\\|");
+                    if (parts.length == 2) {
+                        state.getSettlements().add(new Settlement(parts[0], Double.parseDouble(parts[1])));
+                    } else {
+                        throw new TripJioException("Invalid owe line format.");
+                    }
                 } else {
                     loadLine(line, section, expenses, budget, trip);
                 }
-            } catch (TripJioException e) {
+            } catch (TripJioException | NumberFormatException e) {
                 ui.showError("Skipped invalid line " + lineNumber + " in data file: " + e.getMessage());
             }
         }
@@ -104,7 +113,7 @@ public class Storage {
 
     private static boolean isHeader(String line) {
         return line.equals(EXPENSE_HEADER) || line.equals(BUDGET_HEADER) || line.equals(TRIP_HEADER)
-                || line.equals(TRIPS_HEADER) || line.equals(RATES_HEADER);
+                || line.equals(TRIPS_HEADER) || line.equals(RATES_HEADER) || line.equals(OWE_HEADER);
     }
 
     /**
@@ -163,17 +172,28 @@ public class Storage {
 
         lines.add(TRIP_HEADER);
         lines.addAll(state.getTrip().toStorageLines());
+        
         List<String> tripLines = state.getTrips().toStorageLines();
         if (!tripLines.isEmpty()) {
             lines.add("");
             lines.add(TRIPS_HEADER);
             lines.addAll(tripLines);
         }
+        
         List<String> rateLines = state.getExchangeRates().toStorageLines();
         if (!rateLines.isEmpty()) {
             lines.add("");
             lines.add(RATES_HEADER);
             lines.addAll(rateLines);
+        }
+
+        List<Settlement> settlements = state.getSettlements();
+        if (!settlements.isEmpty()) {
+            lines.add("");
+            lines.add(OWE_HEADER);
+            for (Settlement s : settlements) {
+                lines.add(s.getPerson() + "|" + s.getAmount());
+            }
         }
 
         try {

@@ -40,11 +40,22 @@ public class SplitExpense extends Expense {
         this.exchangeRate = exchangeRate;
     }
 
+    // NEW: Returns the full converted bill
+    public double getTotalAmount() {
+        return super.getAmount();
+    }
+
+    // NEW: Overrides standard Expense so lists, stats, and budgets only use YOUR share
+    @Override
+    public double getAmount() {
+        return getMyShare();
+    }
+
     public double getMyShare() {
         if (hasCustomShare) {
             return customShare;
         }
-        return Math.round((getAmount() / numberOfPeople) * 100.0) / 100.0;
+        return Math.round((getTotalAmount() / numberOfPeople) * 100.0) / 100.0;
     }
 
     public void setCustomShare(Double customShare) {
@@ -58,7 +69,7 @@ public class SplitExpense extends Expense {
             return owed;
         }
 
-        double rest = getAmount() - getMyShare();
+        double rest = getTotalAmount() - getMyShare();
         int otherCount = participantNames.size();
         
         long totalRestCents = Math.round(rest * 100.0);
@@ -99,7 +110,7 @@ public class SplitExpense extends Expense {
     public boolean hasCustomShare() { 
         return hasCustomShare; 
     }
-    
+
     @Override
     public String toString() {
         String base = super.toString() + " (Split among " + numberOfPeople + ")";

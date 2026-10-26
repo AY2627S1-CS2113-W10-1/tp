@@ -11,6 +11,9 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Unit tests for {@link SplitExpense}.
+ */
 public class SplitExpenseTest {
 
     @Test
@@ -63,10 +66,10 @@ public class SplitExpenseTest {
 
     @Test
     public void foreignCurrency_convertsToSgdCorrectly() {
-        // 1000 JPY at 0.009 = 9.00 SGD. Split 3 ways = 3.00 SGD.
+        // 1000 JPY at 0.009 = 9.00 SGD. Split 3 ways = 3.00 SGD (share).
         SplitExpense expense = new SplitExpense("Snacks", 1000.0, 3, null, Category.FOOD, LocalDate.now(), 
                                                 new ArrayList<>(), null, "JPY", 0.009);
-        assertEquals(9.00, expense.getAmount());
+        assertEquals(9.00, expense.getTotalAmount());
         assertEquals(3.00, expense.getMyShare());
     }
 }

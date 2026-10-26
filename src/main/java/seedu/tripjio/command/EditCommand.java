@@ -4,6 +4,7 @@ import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.expense.Expense;
+import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.ui.Ui;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ public class EditCommand extends Command {
     private final Double amount;
     private final Category category;
     private final LocalDate date;
+    private final Double customShare;
 
     /** Month of the expense after editing, known only once the command has run. */
     private YearMonth affectedMonth;
@@ -34,15 +36,18 @@ public class EditCommand extends Command {
      * @param amount New amount, or null to keep the current one.
      * @param category New category, or null to keep the current one.
      * @param date New date, or null to keep the current one.
+     * @param customShare New custom share, or null to keep the current one.
      */
-    public EditCommand(int index, String description, Double amount, Category category, LocalDate date) {
-        assert description != null || amount != null || category != null || date != null
+    public EditCommand(int index, String description, Double amount, Category category, 
+                       LocalDate date, Double customShare) {
+        assert description != null || amount != null || category != null || date != null || customShare != null
                 : "At least one field must be edited";
         this.index = index;
         this.description = description;
         this.amount = amount;
         this.category = category;
         this.date = date;
+        this.customShare = customShare;
     }
 
     /**
@@ -58,6 +63,16 @@ public class EditCommand extends Command {
 
         if (amount != null) {
             expense.setAmount(amount);
+        }
+        if (customShare != null) {
+            if (!(expense instanceof SplitExpense)) {
+                throw new TripJioException("You can only edit custom shares (my/) on split expenses.");
+            }
+            SplitExpense se = (SplitExpense) expense;
+            if (customShare <= 0 || customShare > se.getTotalAmount()) {
+                throw new TripJioException("Share must be greater than 0 and less than or equal to the total bill.");
+            }
+            se.setCustomShare(customShare);
         }
         if (description != null) {
             expense.setDescription(description);
