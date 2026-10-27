@@ -9,6 +9,7 @@ import seedu.tripjio.command.TripListCommand;
 import seedu.tripjio.command.TripSelectCommand;
 import seedu.tripjio.command.TripSetCommand;
 import seedu.tripjio.command.TripStatusCommand;
+import seedu.tripjio.command.TripSummaryCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
 
@@ -38,6 +39,12 @@ public class TripCommandParser {
         }
         if (args.trim().matches("(?i)status\\s+.*")) {
             throw new TripJioException("Trip status does not accept parameters. Use: trip status.");
+        }
+        if (args.trim().equalsIgnoreCase("summary")) {
+            return new TripSummaryCommand();
+        }
+        if (args.trim().matches("(?i)summary\\s+.*")) {
+            throw new TripJioException("Trip summary does not accept parameters. Use: trip summary.");
         }
         ArgumentParser arguments = new ArgumentParser(args);
         String[] words = arguments.getPreamble().split("\\s+", 2);
@@ -78,7 +85,7 @@ public class TripCommandParser {
         if (!arguments.getPreamble().equalsIgnoreCase("set")) {
             throw new TripJioException("Use trip add n/NAME s/DATE e/DATE, trip list, trip select INDEX, "
                     + "trip edit INDEX [n/NAME] [s/DATE] [e/DATE], trip delete INDEX, "
-                    + "trip budget a/AMOUNT, trip set s/DATE e/DATE, or trip status. Dates: DD-MM-YYYY.");
+                    + "trip budget a/AMOUNT, trip set s/DATE e/DATE, trip status, or trip summary. Dates: DD-MM-YYYY.");
         }
         for (String prefix : new String[] {"d", "a", "c", "dt", "m", "n", "my"}) {
             if (arguments.has(prefix)) {

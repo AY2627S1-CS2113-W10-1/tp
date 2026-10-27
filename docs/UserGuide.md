@@ -219,6 +219,7 @@ Shows a list of all available commands and their syntax formats.
   trip set s/START_DATE e/END_DATE
   trip status
   trip budget a/AMOUNT
+  trip summary
   stats [m/MONTH]
   stats compare m/MONTH m/MONTH
   exit
@@ -495,6 +496,38 @@ Displays the configured trip dates, status (Upcoming, Ongoing, or Completed), du
   Recorded spending during trip: $60.30
   ```
 
+#### Summarizing Trip Finances: `trip summary`
+Displays a comprehensive financial overview of the currently selected trip, including dates, duration, phase status, remaining trip days, budget comparison, daily allowance, and an aligned breakdown table of spending across all six categories.
+
+* **Format**: `trip summary` (no parameters)
+* **Details**:
+  * **Trip & Budget Status**: Compares total spending against the allocated trip budget (configured via `trip budget a/AMOUNT`), showing remaining budget or over-budget amounts.
+  * **Daily Allowance**: Calculates remaining budget divided by remaining trip days. If over budget, shows `$0.00/day`. If completed or no budget is set, indicates as `N/A`.
+  * **Category Breakdown Table**: Formatted in aligned columns showing each category's total spending within the trip dates, along with its percentage share of total trip expenses.
+* **Example Output (for an ongoing trip with budget)**:
+  ```text
+  Trip summary: Japan
+    Dates: 01-12-2026 to 14-12-2026 (14 day(s))
+    Status: Ongoing
+    Remaining trip days: 10
+    Budget: $1,500.00
+    Total spent: $300.00
+    Remaining budget: $1,200.00
+    Daily allowance: $120.00/day
+
+  Spending by category:
+  Category                  Spent      % of Total
+  -----------------------------------------------
+  Food                    $150.00           50.0%
+  Transport               $100.00           33.3%
+  Accommodation             $0.00            0.0%
+  Entertainment             $0.00            0.0%
+  Shopping                 $50.00           16.7%
+  Other                     $0.00            0.0%
+  -----------------------------------------------
+  Total                   $300.00          100.0%
+  ```
+
 ---
 
 ### 5. Spending Statistics
@@ -607,6 +640,7 @@ no trip selected. The old `[trip]` section is used only when `[trips]` is absent
 | **Set Trip Budget** | `trip budget a/AMOUNT` | `trip budget a/1500` |
 | **Set Trip Dates** | `trip set s/START_DATE e/END_DATE` | `trip set s/10-12-2026 e/24-12-2026` |
 | **Trip Status** | `trip status` | `trip status` |
+| **Trip Summary** | `trip summary` | `trip summary` |
 | **Monthly Statistics** | `stats [m/MONTH]` | `stats m/10-2026` |
 | **Compare Statistics** | `stats compare m/MONTH m/MONTH` | `stats compare m/09-2026 m/10-2026` |
 | **Exit** | `exit` | `exit` |
