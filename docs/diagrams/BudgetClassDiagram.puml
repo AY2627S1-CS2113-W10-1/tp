@@ -57,14 +57,28 @@ class BudgetCommandParser <<utility>> #E2EDFC {
   +{static} parse(args: String): Command
 }
 
+class ForecastCommand #E2EDFC {
+  -month: YearMonth
+  -today: LocalDate
+  +execute(state: AppState, ui: Ui)
+}
+
+class ForecastCommandParser <<utility>> #E2EDFC {
+  +{static} parse(args: String): Command
+}
+
 AppState *-- "1" Budget
 Command <|-- SetBudgetCommand
 Command <|-- BudgetStatusCommand
+Command <|-- ForecastCommand
 BudgetCommandParser ..> SetBudgetCommand : creates >
 BudgetCommandParser ..> BudgetStatusCommand : creates >
+ForecastCommandParser ..> ForecastCommand : creates >
 SetBudgetCommand ..> Budget : updates >
 BudgetStatusCommand ..> Budget : queries >
 BudgetStatusCommand ..> AppState : queries expenses >
+ForecastCommand ..> Budget : queries >
+ForecastCommand ..> AppState : queries expenses >
 BudgetChecker ..> Budget : reads >
 
 note bottom of Budget
