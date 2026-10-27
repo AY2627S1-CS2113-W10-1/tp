@@ -71,8 +71,48 @@ original EUR amount and rate are displayed and saved. Updating EUR's rate affect
 only subsequently added expenses. `edit INDEX a/10` on this expense means EUR 10
 using its original saved rate. Currency/rate changes on an existing expense are
 not supported; delete and re-add if necessary. Without `cur/`, amounts remain SGD.
-`cur/SGD` uses rate 1 automatically. Foreign-currency split bills are not supported;
-`split ... cur/EUR` is rejected rather than silently counted as SGD.
+`cur/SGD` uses rate 1 automatically for `add`. For foreign split bills, supply both
+`cur/CURRENCY` and `rate/RATE` explicitly, as described below.
+
+### Named splits and settling debts
+
+```text
+split d/Dinner a/100 n/3 p/Alice,Bob
+split d/Taxi a/60 n/2 p/Alice paid/Alice
+split d/Hotel a/100 n/3 p/Alice,Bob cur/EUR rate/1.45 my/45
+owe
+owe p/Alice
+settle p/Alice a/10
+settle p/Alice
+```
+
+`n/` includes you. Optional `p/` lists exactly `n - 1` other participants,
+separated by commas. Names are case-insensitive and must be distinct and non-empty;
+they cannot contain commas, `/`, `|`, or line breaks. Omit `paid/` when you paid
+the bill. Otherwise, `paid/` must name someone in `p/`. Unnamed splits still count
+your spending but cannot assign debts to individual people.
+
+`owe` shows each person's net balance across all splits and settlements, in SGD;
+`owe p/NAME` filters it to one person. `settle p/NAME a/AMOUNT` records a partial
+payment; omitting `a/` settles the full outstanding balance. Payments must be positive
+SGD amounts with at most two decimal places and cannot exceed the outstanding balance.
+Settlement direction is determined from that balance. Settlements do not change expenses
+or budget spending. If there is no balance, settlement reports an error.
+
+For foreign splits, `a/` is the original-currency bill and `rate/` is SGD per unit
+of that currency. Both `cur/` and `rate/` are required together; configured `rate set`
+values are not used for splits. The full bill is converted and rounded to SGD cents
+once, then split. `my/` is always your custom share in **SGD**. For example, the hotel
+bill above is SGD 145, with your share fixed at SGD 45. Rates follow the manual-rate
+rules above; an explicit SGD rate must be 1. The converted bill is capped at SGD
+1,000,000 and your share must be at least SGD 0.01 and no more than the bill.
+Remaining cents are distributed to named participants in list order.
+
+`edit INDEX a/AMOUNT` on any split changes the full bill in **SGD**, including for a
+foreign split; its saved currency and rate remain as historical input metadata.
+An equal share is recalculated, while a custom share stays fixed. Use
+`edit INDEX my/AMOUNT` to set your custom SGD share, or supply `a/` and `my/` together.
+The final bill and share are validated together; rejected edits leave all fields unchanged.
 
 ### Multiple trips
 
@@ -140,6 +180,15 @@ Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
 one of them; no `A|` line means no trip selected. Invalid selection names produce
 a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
+Split expenses retain the legacy fields
+`S|description|sgdBill|people|sgdShare|category|date` and append
+`|payer|participants|currency|rate|hasCustomShare`. Optional metadata uses empty fields;
+participants are comma-separated and the final flag is `true` or `false`.
+The flag preserves custom shares even when they happen to equal an equal split.
+Legacy seven-field records still load; their custom-share status is inferred by comparing
+the saved share with the equal share. Saved split bills and shares are already in SGD,
+so loading does not apply the rate again. `[owe]` records use `person|signedAmount`,
+with two decimal places: positive means money received and negative means money paid.
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
 releases do not understand the new records.
@@ -210,10 +259,12 @@ Shows a list of all available commands and their syntax formats.
   help
   add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE]
   list [c/CATEGORY] [m/MONTH]
-  edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]
+  edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHARE]
   delete INDEX
-  split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE]
+  split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAME,NAME] [paid/NAME] [cur/CURRENCY rate/RATE]
   split list [m/MONTH]
+  owe [p/NAME]
+  settle p/NAME [a/AMOUNT]
   budget set a/AMOUNT [m/MONTH]
   budget status [m/MONTH]
   trip set s/START_DATE e/END_DATE
@@ -514,7 +565,7 @@ A|Original trip
 
 **Q: Can I manually edit `data/tripjio.txt`?**  
 **A:** Yes, but back up the file first. Current sections include `[expense]`,
-`[budget]`, `[trips]` and `[rates]`. Use `DD-MM-YYYY` for dates and `MM-YYYY`
+`[budget]`, `[trips]`, `[rates]` and `[owe]`. Use `DD-MM-YYYY` for dates and `MM-YYYY`
 for budgets. Invalid records produce warnings; invalid selected-trip names leave
 no trip selected. The old `[trip]` section is used only when `[trips]` is absent.
 
@@ -527,8 +578,12 @@ no trip selected. The old `[trip]` section is used only when `[trips]` is absent
 | **Help** | `help` | `help` |
 | **Add Expense** | `add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE]` | `add d/Dinner a/24.50 c/food dt/15-10-2026` |
 | **List Expenses** | `list [c/CATEGORY] [m/MONTH]` | `list c/food m/10-2026` |
-| **Edit Expense** | `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]` | `edit 1 a/20.00 d/Group dinner` |
+| **Edit Expense** | `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHARE]` | `edit 1 a/20.00 d/Group dinner` |
 | **Delete Expense**| `delete INDEX` | `delete 2` |
+| **Split Bill** | `split d/DESCRIPTION a/AMOUNT n/PEOPLE [my/SHARE] [c/CATEGORY] [dt/DATE] [p/NAMES] [paid/NAME] [cur/CURRENCY rate/RATE]` | `split d/Dinner a/90 n/3 p/Alice,Bob` |
+| **List Splits** | `split list [m/MONTH] [trip/]` | `split list m/10-2026` |
+| **View Debts** | `owe [p/NAME]` | `owe p/Alice` |
+| **Settle Debt** | `settle p/NAME [a/AMOUNT]` | `settle p/Alice a/10` |
 | **Set Budget** | `budget set a/AMOUNT [m/MONTH]` | `budget set a/800 m/11-2026` |
 | **Budget Status** | `budget status [m/MONTH]` | `budget status` |
 | **Set Trip Dates** | `trip set s/START_DATE e/END_DATE` | `trip set s/10-12-2026 e/24-12-2026` |

@@ -1,6 +1,7 @@
 package seedu.tripjio.model.split;
 
 import org.junit.jupiter.api.Test;
+import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
 
 import java.time.LocalDate;
@@ -31,7 +32,7 @@ public class SplitExpenseTest {
     }
 
     @Test
-    public void setCustomShare_updatesShareAndFlag() {
+    public void setCustomShare_updatesShareAndFlag() throws TripJioException {
         SplitExpense expense = new SplitExpense("Taxi", 60.0, 3, null, Category.OTHER, LocalDate.now(), 
                                                 new ArrayList<>(), null, null, null);
         expense.setCustomShare(25.0);

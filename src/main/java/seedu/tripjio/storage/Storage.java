@@ -10,6 +10,7 @@ import seedu.tripjio.model.split.Settlement;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.ui.Ui;
+import seedu.tripjio.util.MoneyUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -103,9 +104,14 @@ public class Storage {
                 } else if (RATES_HEADER.equals(section)) {
                     state.getExchangeRates().loadStorageLine(line);
                 } else if (OWE_HEADER.equals(section)) {
-                    String[] parts = line.split("\\|");
+                    String[] parts = line.split("\\|", -1);
                     if (parts.length == 2) {
-                        state.getSettlements().add(new Settlement(parts[0], Double.parseDouble(parts[1])));
+                        String person = SplitExpense.parsePerson(parts[0]);
+                        double amount = Double.parseDouble(parts[1]);
+                        if (!Double.isFinite(amount) || amount == 0) {
+                            throw new TripJioException("Settlement must be a finite non-zero amount.");
+                        }
+                        state.getSettlements().add(new Settlement(person, amount));
                     } else {
                         throw new TripJioException("Invalid owe line format.");
                     }
@@ -205,7 +211,7 @@ public class Storage {
             lines.add("");
             lines.add(OWE_HEADER);
             for (Settlement s : settlements) {
-                lines.add(s.getPerson() + "|" + s.getAmount());
+                lines.add(s.getPerson() + "|" + MoneyUtil.toStorageString(s.getAmount()));
             }
         }
 

@@ -10,6 +10,7 @@ import seedu.tripjio.command.OweCommand;
 import seedu.tripjio.command.SettleCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
+import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.util.DateUtil;
 
 import java.time.LocalDate;
@@ -127,14 +128,15 @@ public class ExpenseCommandParser {
     private static Command parseOwe(ArgumentParser argParser) throws TripJioException {
         argParser.checkAllowedPrefixes("p");
         argParser.checkNoPreamble();
-        return new OweCommand(argParser.getOptional("p"));
+        String person = argParser.getOptional("p");
+        return new OweCommand(person == null ? null : SplitExpense.parsePerson(person));
     }
 
     private static Command parseSettle(ArgumentParser argParser) throws TripJioException {
         argParser.checkAllowedPrefixes("p", "a");
         argParser.checkNoPreamble();
         
-        String person = argParser.getRequired("p");
+        String person = SplitExpense.parsePerson(argParser.getRequired("p"));
         String amountText = argParser.getOptional("a");
         Double amount = (amountText == null) ? null : ArgumentParser.parseAmount(amountText);
         

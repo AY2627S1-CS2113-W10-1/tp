@@ -10,20 +10,24 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Locale;
 
+/** Shows each person's net SGD balance after combining shared bills and recorded settlements. */
 public class OweCommand extends Command {
+    /** Null selects all people; otherwise only this person's balance is displayed. */
     private final String targetPerson;
 
+    /** Creates a ledger query for an optional participant name. */
     public OweCommand(String targetPerson) {
-        this.targetPerson = targetPerson != null ? targetPerson.toLowerCase() : null;
+        this.targetPerson = targetPerson != null ? targetPerson.trim().toLowerCase(Locale.ROOT) : null;
     }
 
+    /** Displays positive balances as money owed to the user and negative balances as money the user owes. */
     @Override
     public void execute(AppState state, Ui ui) {
         Map<String, Double> owedToMe = new HashMap<>();
         Map<String, Double> iOwe = new HashMap<>();
 
-        // Use .getAll() to get the iterable List<Expense>
         for (Expense e : state.getExpenses().getAll()) {
             if (e instanceof SplitExpense) {
                 SplitExpense se = (SplitExpense) e;
@@ -59,9 +63,9 @@ public class OweCommand extends Command {
             if (Math.abs(net) > 0.005) {
                 hasDebt = true;
                 if (net > 0) {
-                    ui.showMessage(person + " owes you: $" + String.format("%.2f", net));
+                    ui.showMessage(person + " owes you: $" + String.format(Locale.ROOT, "%.2f", net));
                 } else {
-                    ui.showMessage("You owe " + person + ": $" + String.format("%.2f", Math.abs(net)));
+                    ui.showMessage("You owe " + person + ": $" + String.format(Locale.ROOT, "%.2f", Math.abs(net)));
                 }
             }
         }

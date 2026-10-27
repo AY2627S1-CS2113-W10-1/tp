@@ -61,18 +61,15 @@ public class EditCommand extends Command {
     public void execute(AppState state, Ui ui) throws TripJioException {
         Expense expense = state.getExpenses().get(index);
 
-        if (amount != null) {
-            expense.setAmount(amount);
+        if (customShare != null && !(expense instanceof SplitExpense)) {
+            throw new TripJioException("You can only edit custom shares (my/) on split expenses.");
         }
-        if (customShare != null) {
-            if (!(expense instanceof SplitExpense)) {
-                throw new TripJioException("You can only edit custom shares (my/) on split expenses.");
-            }
-            SplitExpense se = (SplitExpense) expense;
-            if (customShare <= 0 || customShare > se.getTotalAmount()) {
-                throw new TripJioException("Share must be greater than 0 and less than or equal to the total bill.");
-            }
-            se.setCustomShare(customShare);
+        if (expense instanceof SplitExpense split && (amount != null || customShare != null)) {
+            // Validate the final pair together, so rejected edits cannot leave a partially changed bill.
+            split.updateAmounts(amount == null ? split.getTotalAmount() : amount,
+                    customShare == null ? split.getCustomShare() : customShare);
+        } else if (amount != null) {
+            expense.setAmount(amount);
         }
         if (description != null) {
             expense.setDescription(description);

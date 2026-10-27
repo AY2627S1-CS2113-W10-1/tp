@@ -5,8 +5,9 @@ import seedu.tripjio.command.SplitCommand;
 import seedu.tripjio.command.SplitListCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
+import seedu.tripjio.model.expense.ExchangeRates;
+import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.util.DateUtil;
-import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -35,21 +36,26 @@ public class SplitCommandParser {
         p.checkAllowedPrefixes("d", "a", "n", "my", "c", "dt", "p", "paid", "cur", "rate");
 
         String description = ArgumentParser.parseDescription(p.getRequired("d"));
-        double amount = ArgumentParser.parseAmount(p.getRequired("a"));
+        String currencyText = p.getOptional("cur");
+        String rateText = p.getOptional("rate");
+        if ((currencyText == null) != (rateText == null)) {
+            throw new TripJioException("Provide cur/ and rate/ together for a foreign split.");
+        }
+        String currency = currencyText == null ? null : ExchangeRates.currencyCode(currencyText);
+        Double rate = rateText == null ? null : ExchangeRates.parseRate(rateText).doubleValue();
+        if ("SGD".equals(currency) && rate != 1.0) {
+            throw new TripJioException("The SGD rate must be 1.");
+        }
+        double amount = currency == null ? ArgumentParser.parseAmount(p.getRequired("a"))
+                : ArgumentParser.parseOriginalAmount(p.getRequired("a"));
         int people = parseNumberOfPeople(p.getRequired("n"));
 
         Double myShare = null;
         if (p.has("my")) {
             myShare = ArgumentParser.parseAmount(p.getRequired("my"));
-            if (myShare > amount) {
-                throw new TripJioException("Your custom share cannot be more than the total bill.");
-            }
-        } else {
-            double equalShare = MoneyUtil.roundToCents(amount / people);
-            if (equalShare < 0.01) {
-                throw new TripJioException("Each person's share must be at least $0.01.");
-            }
         }
+        double sgdTotal = currency == null ? amount : ExchangeRates.toSgd(amount, rate);
+        SplitExpense.validateShare(sgdTotal, people, myShare);
 
         Category category = Category.OTHER;
         if (p.has("c")) {
@@ -67,37 +73,16 @@ public class SplitCommandParser {
         String namesStr = p.getOptional("p");
         List<String> participants = new ArrayList<>();
         if (namesStr != null && !namesStr.trim().isEmpty()) {
-            for (String name : namesStr.split(",")) {
-                participants.add(name.trim());
+            for (String name : namesStr.split(",", -1)) {
+                participants.add(SplitExpense.parsePerson(name));
             }
         }
 
         String payer = p.getOptional("paid");
         if (payer != null) {
-            payer = payer.trim();
+            payer = SplitExpense.parsePerson(payer);
         }
-
-        String currency = p.getOptional("cur");
-        if (currency != null) {
-            currency = currency.trim().toUpperCase();
-        }
-
-        Double rate = null;
-        if (p.has("rate")) {
-            try {
-                rate = Double.parseDouble(p.getRequired("rate"));
-                if (rate <= 0) {
-                    throw new TripJioException("Exchange rate must be strictly positive.");
-                }
-            } catch (NumberFormatException e) {
-                throw new TripJioException("Invalid exchange rate format.");
-            }
-        }
-
-        if (currency != null && rate == null) {
-            throw new TripJioException("You must provide an exchange rate (rate/) " 
-                    + "when specifying a foreign currency (cur/).");
-        }
+        SplitExpense.validateParticipants(participants, payer, people);
 
         return new SplitCommand(description, amount, people, myShare, category, date, 
                                 participants, payer, currency, rate);

@@ -3,12 +3,14 @@ package seedu.tripjio.command;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
 import seedu.tripjio.model.expense.Category;
+import seedu.tripjio.model.expense.ExchangeRates;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.ui.Ui;
 
 import java.time.LocalDate;
 import java.util.List;
 
+/** Adds a shared bill whose SGD share contributes to the user's spending and debt ledger. */
 public class SplitCommand extends Command {
     private final String description;
     private final double amount;
@@ -38,12 +40,10 @@ public class SplitCommand extends Command {
 
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
-        if (participantNames != null && !participantNames.isEmpty() && participantNames.size() != numberOfPeople - 1) {
-            throw new TripJioException("Number of names in p/ must be exactly n - 1.");
-        }
-        if (payerName != null && !participantNames.contains(payerName.toLowerCase())) {
-            throw new TripJioException("Payer specified in paid/ must be included in the p/ list.");
-        }
+        SplitExpense.validateParticipants(participantNames == null ? List.of() : participantNames,
+                payerName, numberOfPeople);
+        SplitExpense.validateShare(currency == null ? amount : ExchangeRates.toSgd(amount, exchangeRate),
+                numberOfPeople, customShare);
 
         SplitExpense expense = new SplitExpense(description, amount, numberOfPeople, customShare, 
                                                 category, date, participantNames, payerName, currency, exchangeRate);
