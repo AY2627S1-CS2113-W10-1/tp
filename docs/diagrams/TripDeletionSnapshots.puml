@@ -1,0 +1,33 @@
+@startuml
+!pragma layout smetana
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam objectBackgroundColor #E3F3EF
+skinparam objectBorderColor #60758A
+skinparam ArrowColor #53657A
+left to right direction
+title TripBook snapshots across two deletions
+object "before: TripBook" as Before {
+  names = [Japan, Korea]
+  selected = 1
+}
+object "afterFirstDelete: TripBook" as First {
+  names = [Korea]
+  selected = 0
+}
+object "afterSecondDelete: TripBook" as Second {
+  names = []
+  selected = -1
+}
+Before ..> First : trip delete 1
+First ..> Second : trip delete 1
+note bottom of Before : Korea is selected.
+note bottom of First : Korea remains selected.
+note bottom of Second : No trip is selected.\nExpenses are unchanged.
+legend bottom
+  Snapshots of the same object at different times.
+  Dashed arrows show progression, not UML associations.
+  Internal selected indexes are zero-based; CLI indexes are one-based.
+endlegend
+@enduml

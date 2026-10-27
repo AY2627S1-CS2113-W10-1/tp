@@ -1,0 +1,40 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+title Monthly budget check after a successful expense command
+participant "app: TripJio" as App #E8EDF3
+participant "command: Command" as Cmd #E2EDFC
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "BudgetChecker\n(static)" as Checker #E3F3EF
+participant "budget: Budget" as Budget #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+activate App
+App -> Cmd ++ : execute(state, ui)
+Cmd --> App --
+App -> Cmd ++ : getAffectedMonth()
+Cmd --> App -- : month
+opt month is not null
+App -> Expenses ++ : getTotalSpentInMonth(month)
+Expenses --> App -- : spent
+App -> Checker ++ : check(budget, spent, month)
+Checker -> Budget ++ : getBudgetFor(month)
+Budget --> Checker -- : override, default or null
+note right of Checker
+  No budget: no warning.
+  Above budget: exceeded warning.
+  Otherwise >= rounded 80%: threshold warning.
+end note
+Checker --> App -- : warning or null
+opt warning is not null
+App -> Ui ++ : showMessage(warning)
+Ui --> App --
+end
+end
+note over App, Ui : Normal mutating-command saving follows.\nAppState getters and internal warning helper are omitted.
+deactivate App
+@enduml
