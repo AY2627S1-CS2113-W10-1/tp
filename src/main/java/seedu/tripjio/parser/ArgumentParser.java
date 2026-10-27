@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * and {@code c} = {@code "food"}. Prefixes can be given in any order.
  *
  * <p>Prefixes are written without the slash when calling methods of this class, e.g. {@code has("dt")}.
- * Valid prefixes: {@code d/ a/ c/ dt/ m/ s/ e/ n/ my/}.
+ * Also recognises named-participant and currency prefixes, including {@code p/ paid/ cur/ rate/}.
  */
 public class ArgumentParser {
     /**
@@ -26,7 +26,7 @@ public class ArgumentParser {
      * so that "dt/" is not read as "d/" followed by "t/".
      */
     private static final Pattern PREFIX =
-            Pattern.compile("(?:^|\\s)(trip|sort|order|cur|from|to|r|dt|my|d|a|c|m|s|e|n)/");
+            Pattern.compile("(?:^|\\s)(trip|sort|order|cur|from|to|rate|paid|p|r|dt|my|d|a|c|m|s|e|n)/");
 
     /** A positive number with at most 2 decimal places, e.g. "12" or "12.50". */
     private static final Pattern AMOUNT_FORMAT = Pattern.compile("^\\d+(\\.\\d{1,2})?$");

@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -45,7 +46,7 @@ class ExpenseCommandsTest {
         state.getExpenses().add(new Expense("Lunch", 12.50, Category.FOOD, LocalDate.of(2026, 10, 15)));
         state.getExpenses().add(new Expense("Metro card", 45, Category.TRANSPORT, LocalDate.of(2026, 10, 2)));
         state.getExpenses().add(new SplitExpense("Group dinner", 90, 3, null, Category.FOOD,
-                LocalDate.of(2026, 9, 14)));
+                LocalDate.of(2026, 9, 14), new ArrayList<>(), null, null, null));
     }
 
     @Test
@@ -115,7 +116,8 @@ class ExpenseCommandsTest {
     @Test
     void edit_someFields_onlyThoseChanged() throws TripJioException {
         addSampleExpenses();
-        EditCommand command = new EditCommand(1, null, 13.20, null, LocalDate.of(2026, 11, 1));
+        // Updated to pass null for the customShare field
+        EditCommand command = new EditCommand(1, null, 13.20, null, LocalDate.of(2026, 11, 1), null);
         command.execute(state, ui);
 
         Expense edited = state.getExpenses().get(1);
@@ -130,7 +132,8 @@ class ExpenseCommandsTest {
     @Test
     void edit_invalidIndex_throws() {
         addSampleExpenses();
-        EditCommand command = new EditCommand(9, "Dinner", null, null, null);
+        // Updated to pass null for the customShare field
+        EditCommand command = new EditCommand(9, "Dinner", null, null, null, null);
         assertThrows(TripJioException.class, () -> command.execute(state, ui));
         assertNull(command.getAffectedMonth());
     }

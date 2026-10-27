@@ -6,9 +6,11 @@ import seedu.tripjio.model.budget.Budget;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.expense.ExpenseList;
 import seedu.tripjio.model.expense.ForeignExpense;
+import seedu.tripjio.model.split.Settlement;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.ui.Ui;
+import seedu.tripjio.util.MoneyUtil;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +31,7 @@ public class Storage {
     private static final String TRIP_HEADER = "[trip]";
     private static final String TRIPS_HEADER = "[trips]";
     private static final String RATES_HEADER = "[rates]";
+    private static final String OWE_HEADER = "[owe]";
 
     /** Start of an expense line for a normal expense, e.g. "E|Lunch|12.50|FOOD|15-10-2026". */
     private static final String EXPENSE_TAG = "E|";
@@ -100,10 +103,22 @@ public class Storage {
                     }
                 } else if (RATES_HEADER.equals(section)) {
                     state.getExchangeRates().loadStorageLine(line);
+                } else if (OWE_HEADER.equals(section)) {
+                    String[] parts = line.split("\\|", -1);
+                    if (parts.length == 2) {
+                        String person = SplitExpense.parsePerson(parts[0]);
+                        double amount = Double.parseDouble(parts[1]);
+                        if (!Double.isFinite(amount) || amount == 0) {
+                            throw new TripJioException("Settlement must be a finite non-zero amount.");
+                        }
+                        state.getSettlements().add(new Settlement(person, amount));
+                    } else {
+                        throw new TripJioException("Invalid owe line format.");
+                    }
                 } else if (!(hasNamedSection && TRIP_HEADER.equals(section))) {
                     loadLine(line, section, expenses, budget, trip);
                 }
-            } catch (TripJioException e) {
+            } catch (TripJioException | NumberFormatException e) {
                 ui.showError("Skipped invalid line " + lineNumber + " in data file: " + e.getMessage());
             }
         }
@@ -123,7 +138,7 @@ public class Storage {
 
     private static boolean isHeader(String line) {
         return line.equals(EXPENSE_HEADER) || line.equals(BUDGET_HEADER) || line.equals(TRIP_HEADER)
-                || line.equals(TRIPS_HEADER) || line.equals(RATES_HEADER);
+                || line.equals(TRIPS_HEADER) || line.equals(RATES_HEADER) || line.equals(OWE_HEADER);
     }
 
     /**
@@ -162,7 +177,7 @@ public class Storage {
 
     /**
      * Saves all of the user's data to the file, creating the folder if it does not exist.
-     * The whole file is rewritten, with one block for expenses, budgets and the trip.
+     * The whole file is rewritten.
      *
      * @param state Data to save.
      * @throws TripJioException If the file cannot be written.
@@ -183,11 +198,21 @@ public class Storage {
         // Always write this header: an explicitly empty named section must override stale legacy data.
         lines.add(TRIPS_HEADER);
         lines.addAll(state.getTrips().toStorageLines());
+
         List<String> rateLines = state.getExchangeRates().toStorageLines();
         if (!rateLines.isEmpty()) {
             lines.add("");
             lines.add(RATES_HEADER);
             lines.addAll(rateLines);
+        }
+
+        List<Settlement> settlements = state.getSettlements();
+        if (!settlements.isEmpty()) {
+            lines.add("");
+            lines.add(OWE_HEADER);
+            for (Settlement s : settlements) {
+                lines.add(s.getPerson() + "|" + MoneyUtil.toStorageString(s.getAmount()));
+            }
         }
 
         try {

@@ -72,4 +72,8 @@ public class ExchangeRates {
         }
         set(fields[0], fields[1]);
     }
+
+    public static double toSgd(double originalAmount, double rate) {
+        return Math.round(originalAmount * rate * 100.0) / 100.0;
+    }
 }

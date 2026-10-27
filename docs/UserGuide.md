@@ -24,7 +24,7 @@ With TripJio you can:
   * [Viewing help: `help`](#viewing-help-help)
   * [**Expenses**](#expenses): `add`, `list`, `edit`, `delete`, sorting
   * [**Exchange rates**](#exchange-rates): `rate set`, `rate list`
-  * [**Split expenses**](#split-expenses): `split`, `split list`
+  * [**Split expenses**](#split-expenses): `split`, `split list`, `owe`, `settle`
   * [**Monthly budget**](#monthly-budget): `budget set`, `budget status`, budget warnings
   * [**Trips**](#trips): `trip set`, `trip status`, `trip add`, `trip list`, `trip select`, `trip edit`, `trip delete`, `trip/` filtering
   * [**Statistics**](#statistics): `stats`, `stats compare`
@@ -49,12 +49,12 @@ With TripJio you can:
    ```
 5. You should see the TripJio logo, followed by a welcome message:
    ```
-   ████████╗██████╗ ██╗██████╗     ██╗██╗ ██████╗ 
+   ████████╗██████╗ ██╗██████╗     ██╗██╗ ██████╗
    ╚══██╔══╝██╔══██╗██║██╔══██╗    ██║██║██╔═══██╗
       ██║   ██████╔╝██║██████╔╝    ██║██║██║   ██║
       ██║   ██╔══██╗██║██╔═══╝██   ██║██║██║   ██║
       ██║   ██║  ██║██║██║    ╚█████╔╝██║╚██████╔╝
-      ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝     ╚════╝ ╚═╝ ╚═════╝ 
+      ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝     ╚════╝ ╚═╝ ╚═════╝
 
    Hello! Welcome to TripJio, your travel budget buddy.
    What would you like to do?
@@ -100,6 +100,7 @@ With TripJio you can:
 | `PEOPLE` (`n/` in `split`) | Whole number from 2 to 50, **including you** | `3` |
 | `MY_SHARE` | Same rules as `AMOUNT`, and not more than the full bill | `40` |
 | `NAME` (`n/` in `trip`) | Trip name, same rules as `DESCRIPTION`, unique (case-insensitive) | `Japan` |
+| `NAMES` (`p/` in `split`) | Exactly `n - 1` distinct other people, comma-separated; no empty names, `/`, `\|` or line breaks | `Alice,Bob` |
 | `CURRENCY` | Three-letter currency code (case-insensitive) | `EUR`, `JPY` |
 | `RATE` | How many SGD one unit of the currency is worth. Positive, up to 8 decimal places, at most 1,000,000 | `1.45` |
 | `sort/` | `amount` or `date` (lowercase) | `sort/amount` |
@@ -120,10 +121,12 @@ Here are the commands you can use:
 help
 add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE] [cur/CURRENCY]
 list [c/CATEGORY] [m/MONTH] [sort/amount|date] [order/asc|desc] [trip/]
-edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]
+edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHARE]
 delete INDEX
-split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE]
+split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAME,NAME] [paid/NAME] [cur/CURRENCY rate/RATE]
 split list [m/MONTH] [trip/]
+owe [p/NAME]
+settle p/NAME [a/AMOUNT]
 budget set a/AMOUNT [m/MONTH]
 budget status [m/MONTH]
 trip set s/START_DATE e/END_DATE
@@ -201,7 +204,7 @@ Format: `list [c/CATEGORY] [m/MONTH] [trip/] [sort/amount|date] [order/asc|desc]
 * Filters can be combined: an expense is shown only if it matches all of them.
 * `sort/amount` sorts by the SGD amount (your share for split expenses). `sort/date` sorts by the expense date.
 * `order/` needs `sort/`. If `order/` is not given, the order is `desc` (largest or latest first).
-* Split expenses show your share as the amount, followed by the full bill. Foreign-currency expenses show the SGD amount, followed by the original amount and rate.
+* Split expenses show your share as the amount, followed by the number of people. Foreign-currency expenses show the SGD amount, followed by the original amount and rate.
 * The total at the bottom is the sum of the expenses shown.
 
 Examples:
@@ -218,7 +221,7 @@ Expected output for `list`:
 Here are your expenses:
 1. [Food] Lunch - $12.50 (15-10-2026)
 2. [Transport] Metro card - $45.00 (02-10-2026)
-3. [Food] Group dinner - $30.00 (14-10-2026) [Split: $90.00 / 3 people]
+3. [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
 4. [Food] Ramen - $17.40 (10-10-2026) [EUR 12.00 at 1.45 SGD/EUR]
 Total: $104.90
 ```
@@ -228,7 +231,7 @@ Expected output for `list c/food sort/date order/asc`:
 ```
 Here are your expenses:
 4. [Food] Ramen - $17.40 (10-10-2026) [EUR 12.00 at 1.45 SGD/EUR]
-3. [Food] Group dinner - $30.00 (14-10-2026) [Split: $90.00 / 3 people]
+3. [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
 1. [Food] Lunch - $12.50 (15-10-2026)
 Total: $59.90
 ```
@@ -251,7 +254,7 @@ No expenses match the given filter.
 
 Edits an existing expense.
 
-Format: `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]`
+Format: `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHARE]`
 
 * At least one of the optional fields must be given.
 * Fields that are given replace the existing values. Fields not given stay the same.
@@ -260,7 +263,8 @@ Format: `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]`
 * For a **split expense**, `a/AMOUNT` changes the **full bill**:
   * If the bill was split equally, your share is recalculated as the new bill divided by the number of people.
   * If you gave your own share with `my/`, your share stays the same and only the full bill changes. The new bill cannot be less than your share.
-  * To change the number of people or your own share, delete the split expense and add it again.
+  * Use `my/MY_SHARE` to change your own SGD share; it must be at least $0.01 and no more than the full bill. You can supply `a/` and `my/` together; invalid edits leave the whole record unchanged.
+  * The full bill entered through `edit` is always in SGD, including for a foreign split. To change the number of people, delete the split expense and add it again.
 
 Examples:
 
@@ -298,7 +302,7 @@ Expected output:
 
 ```
 Deleted expense:
-  [Food] Group dinner - $30.00 (14-10-2026) [Split: $90.00 / 3 people]
+  [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
 You now have 3 expenses.
 ```
 
@@ -340,7 +344,7 @@ rate list
 add d/Lunch a/12 c/food dt/10-10-2026 cur/EUR
 ```
 
-The example rate means **1 EUR = 1.45 SGD**, not the reverse. 
+The example rate means **1 EUR = 1.45 SGD**, not the reverse.
 Supply a rate yourself by searching online; these are not live quotes. Rates
 must be positive plain decimals, at most 1000000, with up to eight decimal places.
 Original foreign-currency amounts may exceed 1,000,000. They must be positive,
@@ -353,8 +357,8 @@ original EUR amount and rate are displayed and saved. Updating EUR's rate affect
 only subsequently added expenses. `edit INDEX a/10` on this expense means EUR 10
 using its original saved rate. Currency/rate changes on an existing expense are
 not supported; delete and re-add if necessary. Without `cur/`, amounts remain SGD.
-`cur/SGD` uses rate 1 automatically. Foreign-currency split bills are not supported;
-`split ... cur/EUR` is rejected rather than silently counted as SGD.
+`cur/SGD` uses rate 1 automatically for personal expenses. Foreign splits require
+both `cur/CURRENCY` and `rate/RATE`; see [Named splits and settling debts](#named-splits-and-settling-debts).
 
 ---
 
@@ -366,13 +370,13 @@ Use this when you share a bill with friends, e.g. a group dinner or a shared tax
 
 Adds a group expense and records your share of it.
 
-Format: `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE]`
+Format: `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAMES] [paid/NAME] [cur/CURRENCY rate/RATE]`
 
 * `TOTAL_AMOUNT` is the **full bill** for the whole group.
 * `PEOPLE` is the number of people sharing the bill, **including you**.
 * By default, the bill is split equally: your share is `TOTAL_AMOUNT / PEOPLE`, rounded to 2 decimal places.
   Your share must be at least $0.01, so a very small bill cannot be split among many people.
-* If you did not pay an equal share (e.g. you ordered more), use `my/MY_SHARE` to give your actual share. `MY_SHARE` must be more than 0 and not more than `TOTAL_AMOUNT`.
+* If you did not pay an equal share (e.g. you ordered more), use `my/MY_SHARE` to give your actual share. `MY_SHARE` is in SGD and must be at least $0.01 and no more than the converted full bill.
 * `CATEGORY` and `DATE` work the same way as in [`add`](#adding-an-expense-add).
 * A split expense appears in `list` like a normal expense and can be edited or deleted with `edit` and `delete`.
 
@@ -384,32 +388,79 @@ Examples:
 Expected output:
 
 ```
-Added split expense:
-  [Food] Group dinner - $30.00 (14-10-2026) [Split: $90.00 / 3 people]
-Your share: $30.00 of $90.00.
-You now have 3 expenses.
+Got it. I've added this split expense:
+  [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
+Now you have 3 expenses in the list.
 ```
 
 ---
 
 ### Listing split expenses: `split list`
 
-Shows only your split expenses, with the full bill and your share.
+Shows only your split expenses, with your SGD share and the number of people.
 
-Format: `split list [m/MONTH]`
+Format: `split list [m/MONTH] [trip/]`
 
 Example: `split list m/10-2026`
 
 Expected output:
 
 ```
-Split expenses in October 2026:
-3. Group dinner (14-10-2026) | Bill: $90.00  | People: 3 | Your share: $30.00
-5. Hotpot (20-10-2026)       | Bill: $120.00 | People: 4 | Your share: $40.00
-Total bills: $210.00 | Your total share: $70.00
+Here are your split expenses:
+3. [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
+5. [Food] Hotpot - $40.00 (20-10-2026) (Split among 4)
 ```
 
 > The numbers shown are the same indexes as in `list`.
+
+---
+
+### Named splits and settling debts
+
+```text
+split d/Dinner a/100 n/3 p/Alice,Bob
+split d/Taxi a/60 n/2 p/Alice paid/Alice
+split d/Hotel a/100 n/3 p/Alice,Bob cur/EUR rate/1.45 my/45
+owe
+owe p/Alice
+settle p/Alice a/10
+settle p/Alice
+```
+
+`n/` includes you. Optional `p/` lists exactly `n - 1` other participants,
+separated by commas. Names are case-insensitive and must be distinct and non-empty;
+they cannot contain commas, `/`, `|`, or line breaks. Omit `paid/` when you paid
+the bill. Otherwise, `paid/` must name someone in `p/`. Unnamed splits still count
+your spending but cannot assign debts to individual people.
+
+`owe` shows each person's net balance across all splits and settlements, in SGD,
+with names in alphabetical order and amounts formatted with thousands separators;
+`owe p/NAME` filters it to one person. `settle p/NAME a/AMOUNT` records a partial
+payment; omitting `a/` settles the full outstanding balance. Payments must be positive
+SGD amounts with at most two decimal places and cannot exceed the outstanding balance.
+Settlement direction is determined from that balance. Settlements do not change expenses
+or budget spending. If there is no balance, settlement reports an error.
+
+Settlements are stored independently of split expenses. Editing or deleting a split
+keeps its recorded payments, so the recalculated balance can reverse direction.
+For example, if Alice paid you $30 and you then delete the split that created her
+$30 debt, `owe` shows that you owe Alice $30 because her payment is still recorded.
+There is currently no command to edit or delete a settlement.
+
+For foreign splits, `a/` is the original-currency bill and `rate/` is SGD per unit
+of that currency. Both `cur/` and `rate/` are required together; configured `rate set`
+values are not used for splits. The full bill is converted and rounded to SGD cents
+once, then split. `my/` is always your custom share in **SGD**. For example, the hotel
+bill above is SGD 145, with your share fixed at SGD 45. Rates follow the manual-rate
+rules above; an explicit SGD rate must be 1. The converted bill is capped at SGD
+1,000,000 and your share must be at least SGD 0.01 and no more than the bill.
+Remaining cents are distributed to named participants in list order.
+
+`edit INDEX a/AMOUNT` on any split changes the full bill in **SGD**, including for a
+foreign split; its saved currency and rate remain as historical input metadata.
+An equal share is recalculated, while a custom share stays fixed. Use
+`edit INDEX my/AMOUNT` to set your custom SGD share, or supply `a/` and `my/` together.
+The final bill and share are validated together; rejected edits leave all fields unchanged.
 
 ---
 
@@ -744,7 +795,7 @@ EUR=1.45
 
 * In the `[expense]` block, each line is one expense:
   * `E` lines are normal expenses: `E|DESCRIPTION|AMOUNT|CATEGORY|DATE`.
-  * `S` lines are split expenses: `S|DESCRIPTION|TOTAL_AMOUNT|PEOPLE|MY_SHARE|CATEGORY|DATE`.
+  * `S` lines retain `S|DESCRIPTION|SGD_BILL|PEOPLE|SGD_SHARE|CATEGORY|DATE`, followed by payer, names, currency, rate and the custom-share flag; see [Saved-data compatibility](#saved-data-compatibility).
   * `F` lines are foreign-currency expenses: `F|DESCRIPTION|ORIGINAL_AMOUNT|CATEGORY|DATE|CURRENCY|RATE`.
 * Amounts are written without a dollar sign or thousands separators, e.g. `1234.50`.
 * Dates use `DD-MM-YYYY` and months use `MM-YYYY`, the same as in commands.
@@ -764,6 +815,15 @@ Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
 one of them; no `A|` line means no trip selected. Invalid selection names produce
 a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
+Split expenses retain the legacy fields
+`S|description|sgdBill|people|sgdShare|category|date` and append
+`|payer|participants|currency|rate|hasCustomShare`. Optional metadata uses empty fields;
+participants are comma-separated and the final flag is `true` or `false`.
+The flag preserves custom shares even when they happen to equal an equal split.
+Legacy seven-field records still load; their custom-share status is inferred by comparing
+the saved share with the equal share. Saved split bills and shares are already in SGD,
+so loading does not apply the rate again. `[owe]` records use `person|signedAmount`,
+with two decimal places: positive means money received and negative means money paid.
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
 releases do not understand the new records.
@@ -774,6 +834,9 @@ releases do not understand the new records.
 
 **Q**: How do I transfer my data to another computer?<br>
 **A**: Install TripJio on the other computer, then copy your `data/tripjio.txt` into the `data` folder next to `tripjio.jar` there, replacing the file that TripJio creates.
+
+**Q**: Can I manually edit `data/tripjio.txt`?<br>
+**A**: Yes, but back up the file first. Supported blocks include `[expense]`, `[budget]`, `[trips]`, `[rates]` and `[owe]`. See [Editing the data file](#editing-the-data-file). Invalid supported records are skipped with warnings; a later save omits them.
 
 **Q**: Can I record expenses in other currencies (e.g. EUR, JPY)?<br>
 **A**: Yes. Set a rate first with `rate set from/EUR to/SGD r/1.45`, then add the expense with `cur/EUR`. Rates are entered by you, not fetched online, and all reports are in SGD. See [Exchange rates](#exchange-rates).
@@ -791,7 +854,6 @@ releases do not understand the new records.
 
 ## Known Issues
 
-* Split bills in a foreign currency are not supported yet: `split ... cur/EUR` is rejected. Convert the bill to SGD first.
 * In the data file, categories must be in capital letters (e.g. `FOOD`); lowercase categories are skipped as invalid lines.
 * Older versions of TripJio cannot read files saved by this version. Keep a backup before going back to an older release.
 
@@ -804,12 +866,14 @@ releases do not understand the new records.
 | **Help** | `help` |
 | **Add expense** | `add d/DESCRIPTION a/AMOUNT [c/CATEGORY] [dt/DATE] [cur/CURRENCY]`<br>e.g. `add d/Lunch a/12.50 c/food`, `add d/Ramen a/12 c/food cur/EUR` |
 | **List expenses** | `list [c/CATEGORY] [m/MONTH] [trip/] [sort/amount\|date] [order/asc\|desc]`<br>e.g. `list c/food m/10-2026`, `list trip/ sort/amount` |
-| **Edit expense** | `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE]`<br>e.g. `edit 1 a/13.20` |
+| **Edit expense** | `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHARE]`<br>e.g. `edit 1 a/13.20` |
 | **Delete expense** | `delete INDEX`<br>e.g. `delete 3` |
 | **Set exchange rate** | `rate set from/CURRENCY to/SGD r/RATE`<br>e.g. `rate set from/EUR to/SGD r/1.45` |
 | **List exchange rates** | `rate list` |
-| **Split group expense** | `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE]`<br>e.g. `split d/Group dinner a/90 n/3 c/food` |
+| **Split group expense** | `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAMES] [paid/NAME] [cur/CURRENCY rate/RATE]`<br>e.g. `split d/Group dinner a/90 n/3 c/food` |
 | **List split expenses** | `split list [m/MONTH] [trip/]`<br>e.g. `split list m/10-2026` |
+| **View debts** | `owe [p/NAME]`<br>e.g. `owe p/Alice` |
+| **Settle debt** | `settle p/NAME [a/AMOUNT]`<br>e.g. `settle p/Alice a/10` |
 | **Set monthly budget** | `budget set a/AMOUNT [m/MONTH]`<br>e.g. `budget set a/1000`, `budget set a/1500 m/12-2026` |
 | **View budget status** | `budget status [m/MONTH]`<br>e.g. `budget status` |
 | **Add trip** | `trip add n/NAME s/START_DATE e/END_DATE`<br>e.g. `trip add n/Japan s/01-12-2026 e/14-12-2026` |
