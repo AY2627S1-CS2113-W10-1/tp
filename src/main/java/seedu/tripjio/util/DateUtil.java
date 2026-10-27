@@ -20,7 +20,8 @@ public class DateUtil {
     private static final DateTimeFormatter MONTH_FORMAT =
             DateTimeFormatter.ofPattern("MM-uuuu").withResolverStyle(ResolverStyle.STRICT);
 
-    private static final DateTimeFormatter MONTH_DISPLAY = DateTimeFormatter.ofPattern("MMMM uuuu", Locale.ENGLISH);
+    private static final DateTimeFormatter MONTH_DISPLAY =
+            DateTimeFormatter.ofPattern("MMMM uuuu", Locale.ENGLISH);
 
     private static final DateTimeFormatter SHORT_MONTH_DISPLAY =
             DateTimeFormatter.ofPattern("MMM uuuu", Locale.ENGLISH);

@@ -37,11 +37,11 @@ public class ExpenseTest {
     @Test
     void fromStorageString_wrongTagOrFieldCount_throws() {
         for (String line : new String[] {
-                "E|Lunch|12.50|FOOD",                     // 4 fields: date missing
-                "E|Lunch|12.50|FOOD|15-10-2026|extra",    // 6 fields
-                "E|Lunch|12.50|FOOD|",                    // empty date kept by split(..., -1)
-                "S|Lunch|12.50|FOOD|15-10-2026",          // wrong tag
-                ""}) {
+            "E|Lunch|12.50|FOOD",                     // 4 fields: date missing
+            "E|Lunch|12.50|FOOD|15-10-2026|extra",    // 6 fields
+            "E|Lunch|12.50|FOOD|",                    // empty date kept by split(..., -1)
+            "S|Lunch|12.50|FOOD|15-10-2026",          // wrong tag
+            ""}) {
             assertThrows(TripJioException.class, () -> Expense.fromStorageString(line), line);
         }
     }
