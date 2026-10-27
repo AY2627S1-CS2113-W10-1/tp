@@ -1,0 +1,47 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+
+title Generating trip summary breakdown
+
+participant "app: TripJio" as App #E8EDF3
+participant "command: TripSummaryCommand" as Cmd #E2EDFC
+participant "state: AppState" as State #E3F3EF
+participant "trips: TripBook" as Trips #E3F3EF
+participant "trip: Trip" as Trip #E3F3EF
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+
+activate App
+App -> Cmd ++ : execute(state, ui)
+Cmd -> State ++ : getTrips()
+State --> Cmd -- : trips
+Cmd -> Trips ++ : hasCurrent()
+Trips --> Cmd -- : true
+Cmd -> Trips ++ : getCurrent()
+Trips --> Cmd -- : trip
+
+Cmd -> State ++ : getExpenses()
+State --> Cmd -- : expenses
+Cmd -> Expenses ++ : getExpensesBetween(start, end)
+Expenses --> Cmd -- : tripExpenses
+
+note right of Cmd
+  Calculates category totals and percentages.
+  Builds ASCII summary table.
+  Computes remaining allowance = (budget - spent) / daysLeft.
+end note
+
+Cmd -> Ui ++ : showMessage(table)
+Ui --> Cmd --
+Cmd --> App --
+
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : false
+deactivate App
+@enduml

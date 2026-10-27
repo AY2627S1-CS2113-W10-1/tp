@@ -11,7 +11,8 @@
 - [Acknowledgements](#acknowledgements)
 - [Design & implementation](#design--implementation)
   - [Expense management](#expense-management)
-  - [Monthly budgets and warnings](#monthly-budgets-and-warnings)
+  - [Monthly budgets, warnings and forecasting](#monthly-budgets-warnings-and-forecasting)
+  - [Trip budgets, warnings and summary](#trip-budgets-warnings-and-summary)
   - [Shared-bill expenses](#shared-bill-expenses)
   - [Trip management and selected-trip reporting](#trip-management-and-selected-trip-reporting)
   - [Monthly statistics and comparison](#monthly-statistics-and-comparison)
@@ -35,6 +36,15 @@ This guide describes the code as it is now. It is intended for developers mainta
 parsers, commands, models and persistence. For command syntax and end-user
 instructions, please see the [User Guide](UserGuide.md). Features that are planned
 but not implemented are marked as *planned* in [User stories](#user-stories).
+
+Implemented command families are expense add/list/edit/delete, split creation and
+listing, monthly budget configuration/status/warnings, named-trip management,
+manual exchange rates, monthly statistics/comparisons, selected-trip reports,
+trip budgets and overspending warnings, trip summary breakdowns and spending forecasting.
+Named split participants, repayments (`owe`/`settle`), foreign-currency splits,
+`edit ... my/`, export and recurring expenses are planned work, not available commands
+in this checkout. The global command-output separator and aligned monthly comparison table
+are implemented.
 
 ## Setting up and testing
 
@@ -300,64 +310,179 @@ including split and foreign expenses. `ExpenseTest` and `ExpenseListTest` cover 
 model, the storage format and one-based indexes. `TripJioTest` runs the whole main
 loop to check saving, budget warnings and the separator line.
 
-### Monthly budgets and warnings
+### Monthly budgets, warnings and forecasting
 
 #### Implementation
 
-`Budget` stores an optional default monthly amount and a `TreeMap<YearMonth, Double>`
-of overrides. `getBudgetFor(month)` returns a month's override first, then the
-default, or null when neither exists. Null represents an unset budget, not zero.
-Both setters validate through `MoneyUtil`. Sorted override keys make saved data
-predictable and readable.
+The monthly budget component comprises command parsing (`BudgetCommandParser`, `ForecastCommandParser`), the domain model (`Budget`),
+command execution (`SetBudgetCommand`, `BudgetStatusCommand`, `ForecastCommand`), and automated post-execution evaluation (`BudgetChecker`).
 
-`SetBudgetCommand` changes either the default or one override and requests saving.
-It does not override `getAffectedMonth()`, so changing a budget does not automatically
-trigger the main loop's warning check. `BudgetStatusCommand` reads the applicable
-budget and sums expenses in the requested month. It displays spending and either
-remaining funds or the amount exceeded. For the current month only, it also displays
-days remaining (including today) and a nonnegative daily allowance. A constructor
-accepting an explicit reference date makes those tests reproducible.
+`BudgetCommandParser` dispatches on the subcommand action word (`set` or `status`):
+* `set`: Validates allowed prefixes (`a/` and optional `m/`). Amounts are parsed with `ArgumentParser.parseAmount`
+  and validated through `MoneyUtil.validateAmount` (must be $> 0$ and $\le \$1,000,000.00$). The optional month is
+  parsed via `DateUtil.parseMonth`.
+* `status`: Validates the optional `m/` prefix.
 
-After expense-producing commands, `TripJio` calls `BudgetChecker.check` with the
-affected month and monthly total. The checker returns text rather than printing.
-Spending strictly above the budget produces an exceeded warning. Otherwise,
-spending at or above the cent-rounded 80% threshold produces a near-budget warning.
-Exactly 100% therefore takes the threshold-warning branch, not the exceeded branch.
-No budget or spending below the threshold returns null. Warnings inform users;
-they do not reject the expense or prevent saving.
+`Budget` stores an optional default monthly amount (`Double defaultBudget`) and a `TreeMap<YearMonth, Double>`
+of monthly overrides. `getBudgetFor(month)` returns a month's override first, then the default, or `null` when neither
+exists. `null` represents an unset budget, distinct from a zero budget. In storage, the `[budget]` block writes
+`default=AMOUNT` followed by sorted `MM-YYYY=AMOUNT` lines. `TreeMap` guarantees chronological ordering in saved files,
+ensuring deterministic persistence.
+
+![Budget class diagram](images/BudgetClassDiagram.svg)
+
+`SetBudgetCommand` modifies either the default budget or a specific month's override in `Budget` and displays a
+confirmation message through `Ui`. It returns `true` from `isMutating()`, prompting `TripJio` to save the state via
+`Storage.save(state)`. It does not override `getAffectedMonth()`, so configuring a budget does not trigger an
+overspending warning.
+
+![Setting a monthly budget sequence](images/SetBudgetSequence.svg)
+
+`BudgetStatusCommand` reads the effective budget for the requested month via `Budget.getBudgetFor(month)` and sums
+the month's expenses using `ExpenseList.getTotalSpentInMonth(month)`. It reports the total budget, amount spent, and
+either remaining funds or the amount exceeded. For the ongoing month (where `month.equals(YearMonth.from(today))`),
+it additionally computes:
+* `daysLeft = month.lengthOfMonth() - today.getDayOfMonth() + 1` (including today)
+* `dailyAllowance = (remaining > 0) ? MoneyUtil.roundToCents(remaining / daysLeft) : 0.0`
+
+A secondary constructor `BudgetStatusCommand(YearMonth month, LocalDate today)` injects an explicit reference date,
+making date-boundary and leap-year tests deterministic.
+
+![Viewing budget status sequence](images/BudgetStatusSequence.svg)
+
+`ForecastCommandParser` processes the `forecast` command word and validates the optional `m/` prefix.
+`ForecastCommand` projects end-of-month spending based on elapsed daily spending rates:
+* **Past months**: The month has already concluded, so actual historical spending is reported without projection.
+* **Future months**: The month has not started yet, so no expenses have occurred.
+* **Current month**: Extrapolates spending using linear progression:
+  * `daysPassed = today.getDayOfMonth()`
+  * `daysInMonth = month.lengthOfMonth()`
+  * `projected = MoneyUtil.roundToCents((spent / daysPassed) * daysInMonth)`
+  * Compares `projected` against `Budget.getBudgetFor(month)`. If projected spending exceeds the budget, it warns of estimated overspending (`Projected to exceed budget by $...`). Otherwise, it reports safe pacing. When no budget exists, it reports projected monthly spending.
+
+Like `BudgetStatusCommand`, `ForecastCommand` provides a secondary constructor `(YearMonth, LocalDate)` allowing deterministic unit tests across date boundaries and leap years.
+
+![Forecasting monthly spending sequence](images/ForecastSequence.svg)
+
+After every mutating expense command (`add`, `edit`, `split`), the `TripJio` main loop retrieves `command.getAffectedMonth()`
+and queries `ExpenseList.getTotalSpentInMonth(month)`. It then invokes `BudgetChecker.check(budget, spent, month)`:
+* If spending strictly exceeds the budget, an **exceeded warning** is produced (`Warning: You have exceeded your budget...`).
+* Otherwise, if spending meets or exceeds the cent-rounded 80% threshold (`MoneyUtil.roundToCents(budget * 0.8)`), an
+  **80% warning** is produced (`Warning: You have used 80% or more of your budget...`).
+* Exactly 100% spending takes the 80% threshold branch with `$0.00 remaining`, not the exceeded branch.
+* Spending below 80% or months without a configured budget return `null` (no warning displayed).
+
+`BudgetChecker` returns a formatted `String` rather than printing directly, maintaining clean separation between the
+model layer and the user interface.
 
 ![Monthly budget warning sequence](images/BudgetWarningSequence.svg)
 
 #### Example scenario
 
-1. Set `budget set a/1000` and `budget set a/100 m/10-2026`.
-2. Add an October expense of $80. October's override is used and the 80% warning appears.
-3. Add another October expense of $21. Spending is $101, so the exceeded warning appears.
-4. Run `budget status m/10-2026` to inspect the result. Other months still use $1000.
+1. The user enters `budget set a/1000`. `SetBudgetCommand` sets `defaultBudget = 1000.0`.
+2. The user enters `budget set a/500 m/12-2026`. `SetBudgetCommand` adds an entry for `2026-12` in `monthlyBudgets`.
+3. The user adds an expense on `15-12-2026` of $420. `TripJio` queries `getAffectedMonth()` (`2026-12`), fetches
+   the December budget ($500), and calls `BudgetChecker.check`. Since $420 $\ge$ $400 (80%), an 80% warning is shown.
+4. The user enters `budget status m/12-2026`. `BudgetStatusCommand` shows $500 budget, $420 spent, and $80 remaining.
+5. Inquiries for any other month (e.g. `budget status m/11-2026`) fall back to the default $1,000 budget.
+6. On day 15 of December with $420 spent, the user enters `forecast m/12-2026`. `ForecastCommand` calculates daily pace ($420 / 15 = $28.00/day) and projects $868.00 total spending, warning of projected overspending by $368.00 against the $500 budget.
 
 #### Design considerations
 
 Aspect: Configuring monthly budgets.
 
 - Alternative 1 (current choice): Default with monthly overrides.
-  - Pros: Avoids repeated setup while accommodating unusual months.
-  - Cons: Does not represent trip or category allocations.
-- Alternative 2: Explicit budgets for every month.
-  - Pros: Each configured month has its own amount.
-  - Cons: Repetitive setup can leave months unconfigured.
+  - Pros: Avoids repetitive monthly setup while allowing flexibility for unusual or travel months.
+  - Cons: Requires an explicit fallback check (`monthly override ?? defaultBudget ?? null`).
+- Alternative 2: Explicit budgets for every individual month.
+  - Pros: Simpler data structure (only a map without default fallback).
+  - Cons: Burdens users with configuring every month from scratch; unconfigured months have no budget.
 
-Aspect: Triggering warnings.
+Aspect: Triggering budget warnings.
 
-- Alternative 1 (current choice): Central post-execution checks.
-  - Pros: Add/edit/split share one policy.
-  - Cons: Commands must return the correct affected month or checks are skipped.
-- Alternative 2: Each command generates its own warning.
-  - Pros: Command-specific behaviour is straightforward.
-  - Cons: Duplicates thresholds and couples commands to budget policy.
+- Alternative 1 (current choice): Centralized post-execution hook in `TripJio`.
+  - Pros: Decouples commands from budget policy; `add`, `edit`, and `split` reuse one unified warning mechanism.
+  - Cons: Requires commands that affect spending to implement `getAffectedMonth()`.
+- Alternative 2: Each command evaluates and prints its own warnings during `execute`.
+  - Pros: Warnings occur directly inside the command logic.
+  - Cons: Duplicates threshold logic across commands and tightly couples command execution to `BudgetChecker`.
 
-`BudgetTest`, `BudgetCheckerTest`, `SetBudgetCommandTest` and `BudgetStatusCommandTest`
-cover overrides, thresholds, missing budgets and date-dependent allowance calculations.
-Trip-specific budgets and forecasting remain planned extensions.
+Aspect: Daily allowance scope in `budget status`.
+
+- Alternative 1 (current choice): Compute daily allowance only when viewing the current ongoing month.
+  - Pros: Daily pace is only actionable for the current active period; past months are closed and future months have not started.
+  - Cons: Users querying other months do not see pacing figures.
+- Alternative 2: Display daily allowance for any queried month.
+  - Pros: Output fields remain identical regardless of the target month.
+  - Cons: Displaying a "daily allowance" for a completed historical month is confusing and mathematically artificial.
+
+Aspect: Extrapolating spending in `forecast`.
+
+- Alternative 1 (current choice): Uniform daily pacing `(spent / daysPassed) * totalDays`.
+  - Pros: Transparent, predictable, and requires no opaque statistical assumptions.
+  - Cons: Does not distinguish between uniform day-to-day spending and lump-sum one-off payments.
+- Alternative 2: Weighted trend based on recent days or multi-month moving average.
+  - Pros: Adapts to non-linear spending changes.
+  - Cons: Requires extensive historical data which exchange students lack, and adds complexity without significant accuracy gains for short periods.
+
+`BudgetTest`, `BudgetCheckerTest`, `SetBudgetCommandTest`, `BudgetStatusCommandTest` and `ForecastCommandTest`
+cover overrides, thresholds, missing budgets, parsing, and date-dependent allowance and projection calculations.
+
+### Trip budgets, warnings and summary
+
+#### Implementation
+
+The trip budgeting subsystem extends `Trip` with planned spending targets, introduces automated trip overspending checks after mutating expense operations, and provides a formatted category breakdown report.
+
+`Trip` stores an optional `Double budget` alongside its start and end dates. `getBudget()` returns `null` when unset. In storage, `TripBook.toStorageLines()` writes trips as `T|name|start|end|budget`. The budget token is optional: legacy 4-token records load safely with `budget = null`, preserving backward compatibility with v1.0 and earlier data files.
+
+`TripCommandParser` dispatches the `budget` and `summary` subcommands:
+* `trip budget a/AMOUNT`: Validates the `a/` prefix using `ArgumentParser.checkAllowedPrefixes("a")` and `MoneyUtil.validateAmount`. `TripBudgetCommand` requires an active trip selection (`tripBook.hasCurrent()`), updates `trip.setBudget(amount)`, and returns `true` from `isMutating()` to trigger storage persistence.
+* `trip summary`: `TripSummaryCommand` verifies an active trip selection, filters expenses within the trip's date range via `ExpenseList.getExpensesBetween(trip.getStartDate(), trip.getEndDate())`, and aggregates spending totals across categories.
+
+![Generating trip summary breakdown](images/TripSummarySequence.svg)
+
+`TripSummaryCommand` produces a structured 3-column ASCII breakdown table (`Category`, `Spent`, `% of Total`) styled consistently with the application's comparison tables. It displays:
+* Trip dates and inclusive duration.
+* Total planned budget vs. total actual spent in SGD.
+* Remaining days and daily allowance (`remaining / remainingDays`), guarded against completed trips or overbudget states. If the budget is exceeded, it displays the excess amount.
+
+To detect trip overspending automatically, `Command.getAffectedDate()` provides a hook returning the expense date of a mutating transaction (implemented in `AddCommand`, `AddForeignExpenseCommand`, `SplitCommand`, and `EditCommand`). After command execution, `TripJio` calls `BudgetChecker.checkTrip(trip, spent)`:
+* Evaluates spending only if an active trip is selected (`tripBook.hasCurrent()`), has a configured budget (`trip.getBudget() != null`), and the affected date falls within the trip (`trip.contains(affectedDate)`).
+* Produces an **exceeded warning** if spending strictly exceeds the trip budget.
+* Produces an **80% warning** if spending meets or exceeds the cent-rounded threshold (`MoneyUtil.roundToCents(tripBudget * 0.8)`).
+* Returns `null` if spending is below 80% or if the transaction does not affect the selected trip.
+
+#### Example scenario
+
+1. The user selects a Japan trip: `trip 1`.
+2. The user sets a trip budget: `trip budget a/2000`. `TripBudgetCommand` assigns the budget and saves the state.
+3. The user records a flight expense of $1,650 dated during the trip. `TripJio` invokes `command.getAffectedDate()`, verifies it falls in Japan, and queries `BudgetChecker.checkTrip`. Because $1,650 $\ge$ $1,600 (80%), an 80% warning is shown.
+4. Adding another expense of $400 brings total trip spending to $2,050. The next operation triggers the exceeded warning (`Exceeded trip budget by $50.00`).
+5. The user runs `trip summary`. `TripSummaryCommand` prints the ASCII category table, reports $2,000 budget vs $2,050 spent, and notes that the budget is exceeded.
+
+#### Design considerations
+
+Aspect: Storage format for trip budgets.
+
+- Alternative 1 (current choice): Optional 5th field on existing `T|` trip records.
+  - Pros: Encapsulates all trip attributes in a single record; cleanly backward-compatible with 4-column lines.
+  - Cons: Broadens the line schema for trips.
+- Alternative 2: Dedicated `[trip_budgets]` section in the data file.
+  - Pros: Keeps the `T|` record strictly confined to name and dates.
+  - Cons: Requires cross-referencing trip names or indexes across separate storage sections.
+
+Aspect: Scope of trip overspending warnings.
+
+- Alternative 1 (current choice): Check only the currently selected trip.
+  - Pros: Aligns with TripJio's selected-trip focus; avoids multiple warnings for single expenses when date ranges overlap.
+  - Cons: Expenses belonging to an unselected trip containing the date do not trigger warnings.
+- Alternative 2: Iterate and warn for every configured trip that contains the expense date.
+  - Pros: Warns regardless of which trip is currently selected.
+  - Cons: Generates noisy duplicate warnings and complicates user mental models when overlapping trips exist.
+
+`TripBudgetCommandTest`, `TripSummaryCommandTest`, `BudgetCheckerTest` and `TripJioTest`
+verify validation, ASCII table formatting, warning thresholds and persistence boundaries.
 
 ### Shared-bill expenses
 
@@ -952,3 +1077,18 @@ its own setup; start with a fresh isolated directory when indexes would otherwis
 3. Reverse the months and confirm change signs reverse; an empty month yields zeros.
 4. Run `list sort/amount order/desc`; verify descending personal SGD amounts and
    original global indexes. Reports must not change the stored collection.
+
+### Forecasting
+
+1. Run `budget set a/300 m/10-2026` and add $100 on a past date in that month.
+2. In the ongoing month, run `forecast`: it computes daily pacing and displays projected end-of-month spending and budget comparison.
+3. Query a concluded historical month: `forecast m/09-2026`; it reports actual past spending without extrapolation.
+4. Query a future month: `forecast m/12-2026`; it reports that the month has not started yet.
+
+### Trip budget and summary
+
+1. In a fresh instance, add a trip: `trip add n/Exchange s/01-10-2026 e/30-10-2026`.
+2. Run `trip select 1`, then configure a trip budget: `trip budget a/1000`.
+3. Add an expense of $850 dated `10-10-2026`: an 80% trip budget warning appears.
+4. Add another expense of $200 dated `12-10-2026`: total trip spending becomes $1,050 and a trip budget exceeded warning is displayed.
+5. Run `trip summary`: verify that the 3-column ASCII table displays categories, spending amounts, percentages, budget vs. spent, and excess amounts.
