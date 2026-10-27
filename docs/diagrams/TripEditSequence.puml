@@ -1,0 +1,43 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+hide footbox
+title Editing a trip: validation before mutation
+participant "app: TripJio" as App #E8EDF3
+participant "command: TripEditCommand" as Cmd #E2EDFC
+participant "book: TripBook" as Book #E3F3EF
+participant "trip: Trip" as Trip #E3F3EF
+participant "storage: Storage" as Storage #FBE7D5
+note over App, Cmd
+  Parser and TripCommandParser have validated the input
+  and constructed the command. Routine getters and UI calls are omitted.
+end note
+activate App
+App -> Cmd ++ : execute(state, ui)
+Cmd -> Book ++ : edit(index, name, start, end)
+Book -> Book ++ : checkIndex(index)
+Book --> Book --
+Book -> Book ++ : validateName(name, position)
+Book --> Book --
+Book -> Trip ++ : set(combinedStart, combinedEnd)
+note right of Trip : Validate both dates\nbefore changing either.
+Trip --> Book --
+note right of Book : Rename only after date validation succeeds.\nRetain the same Trip and selection.
+Book --> Cmd --
+Cmd --> App -- : success
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : true
+App -> Storage ++ : save(state)
+Storage --> App --
+deactivate App
+note over App, Storage
+  Successful path shown. Validation errors unwind to the main loop:
+  display an error and skip saving. A later I/O save failure
+  does not roll back the in-memory change.
+end note
+@enduml

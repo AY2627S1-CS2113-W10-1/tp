@@ -1,0 +1,35 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam rectangleBorderColor #60758A
+skinparam componentStyle rectangle
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+title TripJio architecture
+actor User
+rectangle "TripJio\n(main loop)" as Main #E8EDF3
+rectangle "Ui" as Ui #EFE6F8
+rectangle "Parser" as Parser #E2EDFC
+rectangle "Command" as Command #E2EDFC
+rectangle "Model\n(AppState and\nits classes)" as Model #E3F3EF
+rectangle "Storage" as Storage #FBEBD8
+database "data/tripjio.txt" as File
+rectangle "Util\nDateUtil, MoneyUtil" as Util #F4F6F9
+
+User --> Ui : types a command
+Ui --> User : shows results
+Main --> Ui : read input
+Main --> Parser : parse
+Parser ..> Command : creates
+Main --> Command : execute
+Command --> Model : reads / changes
+Command --> Ui : show result
+Main --> Storage : load / save
+Storage --> Model : builds / reads
+Storage --> File : reads / writes
+Storage ..> Ui : warnings
+Parser ..> Util
+Model ..> Util
+@enduml

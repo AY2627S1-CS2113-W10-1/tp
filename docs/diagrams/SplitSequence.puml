@@ -1,0 +1,39 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+title Creating a split expense (validated inputs)
+participant "app: TripJio" as App #E8EDF3
+participant "command: SplitCommand" as Cmd #E2EDFC
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+activate App
+App -> Cmd ++ : execute(state, ui)
+create participant "expense: SplitExpense" as Split #E3F3EF
+Cmd -> Split : new SplitExpense(..., 90, 3, null, ...)
+activate Split
+note right of Split
+  Rounded equal share = $30.
+  Inherited Expense amount stores this share.
+  Full bill remains $90.
+end note
+Split --> Cmd : constructed expense
+deactivate Split
+Cmd -> Expenses ++ : add(expense)
+Expenses --> Cmd --
+Cmd -> Expenses ++ : size()
+Expenses --> Cmd -- : count
+Cmd -> Ui ++ : showMessage(...)
+Ui --> Cmd --
+Cmd --> App --
+note over App, Ui
+  AppState getters are omitted.
+  The main loop next checks the affected month's budget
+  and saves because isMutating() returns true.
+end note
+deactivate App
+@enduml

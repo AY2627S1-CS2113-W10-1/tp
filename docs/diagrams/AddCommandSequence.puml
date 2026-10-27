@@ -1,0 +1,58 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam sequenceParticipantBorderColor #60758A
+skinparam sequenceLifeLineBorderColor #A5B1BE
+skinparam sequenceGroupBorderColor #8D9BAD
+skinparam sequenceGroupBackgroundColor #F4F6F9
+skinparam sequenceReferenceBackgroundColor #F4F6F9
+title Main loop running "add d/Lunch a/12.50"
+participant "app: TripJio" as App #E8EDF3
+participant "ui: Ui" as Ui #EFE6F8
+participant "Parser" as Parser #E2EDFC
+participant "c: AddCommand" as Cmd #E2EDFC
+participant "expenses:\nExpenseList" as Expenses #E3F3EF
+participant "storage:\nStorage" as Storage #FBEBD8
+
+activate App
+App -> Ui : readCommand()
+activate Ui
+Ui --> App : input
+deactivate Ui
+App -> Parser : parse(input)
+activate Parser
+create Cmd
+Parser -> Cmd : new AddCommand(...)
+Parser --> App : c
+deactivate Parser
+App -> Cmd : execute(state, ui)
+activate Cmd
+Cmd -> Expenses : add(expense)
+activate Expenses
+Expenses --> Cmd
+deactivate Expenses
+Cmd -> Ui : showMessage(...)
+activate Ui
+Ui --> Cmd
+deactivate Ui
+Cmd --> App
+deactivate Cmd
+ref over App, Expenses : check budget of c.getAffectedMonth()
+opt c.isMutating()
+App -> Storage : save(state)
+activate Storage
+Storage --> App
+deactivate Storage
+end
+App -> Ui : showLine()
+activate Ui
+Ui --> App
+deactivate Ui
+deactivate App
+note over App, Storage : On TripJioException: show "Error: ...", skip the\nremaining steps, but still call showLine().
+@enduml

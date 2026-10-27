@@ -1,0 +1,39 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+hide footbox
+title Selected-trip statistics: filter first, then total
+participant "command: TripStatsCommand" as Cmd #E2EDFC
+participant "ExpenseFilter\n(static)" as Filter #E3F3EF
+participant "book: TripBook" as Book #E3F3EF
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "Statistics\n(static)" as Stats #E3F3EF
+activate Cmd
+Cmd -> Filter ++ : select(state, null, month, true)
+Filter -> Book ++ : hasCurrent()
+Book --> Filter -- : true
+Filter -> Book ++ : getCurrent()
+Book --> Filter -- : selected trip
+note over Filter, Book
+  Selection is resolved at execution time.
+  No selection: throw TripJioException; the caller shows an error.
+end note
+Filter -> Expenses ++ : getExpensesBetween(start, end)
+Expenses --> Filter -- : fresh list of original expenses
+note right of Filter : Intersect with the optional month.\nBoth trip boundary dates are included.
+Filter --> Cmd -- : filtered expenses
+Cmd -> Stats ++ : getCategoryTotals(filtered expenses)
+note right of Stats : Sum personal SGD amounts\nusing getAmount().
+Stats --> Cmd -- : category totals
+note over Cmd : Display the trip name, category totals and total spent.\nThe command remains read-only.
+deactivate Cmd
+note over Cmd, Stats
+  Successful path shown; AppState/date/name getters and Ui calls are omitted.
+  List and split-list commands reuse the filter but retain global indexes.
+end note
+@enduml
