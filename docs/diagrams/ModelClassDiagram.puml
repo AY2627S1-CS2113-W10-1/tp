@@ -1,4 +1,5 @@
 @startuml
+!pragma layout smetana
 skinparam backgroundColor #FFFFFF
 skinparam defaultFontColor #243247
 skinparam ArrowColor #53657A
@@ -24,11 +25,13 @@ class Budget
 class TripBook
 class Trip
 class ExchangeRates
+class Settlement
 
 AppState *-- "1" ExpenseList
 AppState *-- "1" Budget
 AppState *-- "1" TripBook
 AppState *-- "1" ExchangeRates
+AppState --> "0..*" Settlement : settlements {ordered}
 ExpenseList *-- "*" Expense
 Expense <|-- SplitExpense
 Expense <|-- ForeignExpense

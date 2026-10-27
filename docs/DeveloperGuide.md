@@ -138,7 +138,8 @@ instance of each model class, and every command works on this shared state. `Exp
 are one-based to match what users see in `list`.
 
 `Expense` has two subclasses. `SplitExpense` stores the full bill and the number of
-people, and keeps the user's share in the inherited amount. `ForeignExpense` stores
+people. Its inherited amount holds the full SGD bill, while overridden
+`getAmount()` returns the user's share. `ForeignExpense` stores
 the original amount, currency and rate, and keeps the converted SGD value in the
 inherited amount. Because of this, budgets, trip reports, sorting and statistics
 only call `getAmount()` and never need to check which kind of expense they have.
@@ -207,8 +208,9 @@ The parser then asks for exactly what the command needs:
 - Static helpers (`parseAmount`, `parseIndex`, `parseDescription`) and
   `DateUtil` / `MoneyUtil` check the format of each value.
 
-All validation happens in the parser. A command object is only created from valid
-values, so `execute` does not repeat these checks.
+The parser checks input syntax before constructing commands. State-dependent rules
+and subtype invariants are also validated in models/commands; split edits, for
+example, must combine a proposed bill/share with retained state before mutation.
 
 **Adding.** `ExpenseCommandParser.parseAdd` uses `other` when `c/` is missing and
 today's date when `dt/` is missing, and rejects a future date. Without `cur/` it
@@ -230,11 +232,12 @@ amounts or dates stay in the order they were added.
 
 <img src="images/EditExpenseSequence.svg" alt="Edit expense sequence" width="554">
 
-The amount is changed first because it is the only field whose meaning depends on the
-type of expense, and the only one the model can reject (for example, a new full bill
-smaller than a custom split share). If `setAmount` throws, no other field has been
-changed, so the expense is never left half-edited. `EditCommand` calls the same
-method for every expense; dynamic binding chooses the rule of the actual subclass.
+For ordinary and foreign personal expenses, amount edits dispatch through
+`setAmount`, as illustrated above. Split edits instead combine the proposed bill
+and custom share, then call `SplitExpense.updateAmounts` before changing any other
+field. `my/` on a non-split is rejected before amount mutation. Both paths validate
+before changing state, so invalid edits leave the record unchanged. The shared-bill
+section below explains the split-specific path and currency units.
 After the edit, `getAffectedMonth()` returns the expense's final month. If the date
 moved the expense out of a month, that month's spending went down, so it does not
 need a new warning.
@@ -250,7 +253,8 @@ the next `edit` or `delete`.
 2. `split d/Dinner a/90 n/3 c/food dt/02-10-2026` adds a `SplitExpense` (share $30)
    as expense 2.
 3. `list sort/amount` prints expense 2 before expense 1, with their original numbers.
-4. `edit 2 a/120` calls `setAmount(120)` on the `SplitExpense`. It treats 120 as the
+4. `edit 2 a/120` calls `updateAmounts` with 120 and the retained custom-share
+   setting. It treats 120 as the
    new full bill, so the user's share becomes $40. The object is changed in place,
    so it stays a split expense.
 5. `edit 2 a/10 dt/05-10-2026` fails if the dinner had a custom share above $10.
@@ -283,11 +287,11 @@ Aspect: How `list` shows numbers for filtered or sorted results.
 
 Aspect: Where the rules for editing different expense types live.
 
-- Alternative 1 (current choice): Each subclass overrides `setAmount`.
-  - Pros: `EditCommand` needs no type checks; a new subclass only adds its own rule.
+- Alternative 1 (current choice): Subtypes own validation, with an explicit atomic split-edit path.
+  - Pros: Ordinary/foreign edits use dynamic dispatch; split bill/share changes are validated together in the model.
   - Cons: `a/` means different things for different types (SGD amount, full bill,
     original currency), which the User Guide must explain.
-- Alternative 2: `EditCommand` checks the type with `instanceof`.
+- Alternative 2: Put all subtype validation inside `EditCommand`.
   - Pros: All edit rules are visible in one place.
   - Cons: Every new expense type requires changing the command, and the rules would
     be separated from the data they protect.
@@ -361,66 +365,195 @@ Trip-specific budgets and forecasting remain planned extensions.
 
 ### Shared-bill expenses
 
-#### Implementation
+#### Implementation and model contract
 
-`SplitCommandParser` accepts a description, full SGD bill and participant count,
-plus an optional personal share. The count must be between 2 and 50. A custom
-share must be positive and no greater than the bill. With no custom share, the
-equal share is rounded to cents and must be at least $0.01. Category defaults to
-`OTHER` and date defaults to today. Unsupported prefixes, including named people
-and foreign currency, are rejected by the current parser.
+**Feature owner: John Alday.** Split creation, personal-share edits, debt queries
+and settlements operate on the same AppState used by budgets and trip reports.
+`SplitCommandParser` validates required description/amount/people, optional
+category/date/share, participant names and currency arguments. Category defaults
+to OTHER, date to today; future expense dates and unsupported prefixes are rejected.
 
-`SplitCommand.execute` constructs a `SplitExpense`, appends it to the shared
-`ExpenseList` and prints the result. `SplitExpense` extends `Expense`: the inherited
-amount stores the user's share, while the subtype stores the full bill, participant
-count and whether the share was custom. `getAmount()` is inherited, not overridden.
-Consequently budgets, trip totals and statistics count only the user's share without
-knowing that the item is a split bill.
+`SplitCommand.execute` constructs a SplitExpense and appends it to ExpenseList.
+It returns true from `isMutating()` and `YearMonth.from(date)` from
+`getAffectedMonth()`: the main loop checks that month's budget after a successful
+split and saves. Failed commands do neither. Only the user's SGD share counts
+towards spending; a full group bill is never added again as a separate expense.
 
 ![Split creation and shared expense storage sequence](images/SplitSequence.svg)
 
-`SplitExpense.setAmount` interprets its argument as a replacement full bill. For
-an equal split it recalculates the share; for a custom split it preserves the share
-and rejects a bill smaller than it. Validation precedes mutation. `split list`
-restricts results to split instances, optionally intersecting month/trip filters,
-while retaining global expense indexes.
+SplitExpense extends Expense. Its inherited amount holds the full SGD bill;
+`getTotalAmount()` reads that value via the superclass, while overridden
+`getAmount()` returns `getMyShare()`. A null customShare selects an equal share
+rounded to cents; a non-null customShare stays fixed until explicitly edited.
+Consumers sum polymorphic getAmount(), so budgets, sorting and trip/category
+reports do not inspect private split fields.
 
-#### Example scenario
+![Split model, expense polymorphism and signed settlements](images/SplitLedgerModel.svg)
 
-1. `split d/Dinner a/90 n/3 c/food dt/01-10-2026` records a $30 personal expense.
-2. `edit 1 a/120` changes an equal split's personal amount to $40.
-3. `split d/Taxi a/50 n/3 my/10 dt/01-10-2026` records only $10 for the user.
-4. Editing that taxi bill below $10 fails; raising its bill preserves the $10 share.
+The diagram omits unrelated state and routine getters. Settlement is stored
+separately from expenses: a repayment changes the ledger, not personal spending.
+Public construction relies on parser/storage boundary validation; constructor
+assertions are not a substitute for validating external input.
 
-An `S|` record stores description, full bill, people, personal share, category and
-date. The loader validates each record and infers whether the share is custom by
-comparing it with the rounded equal share. It does not store the custom/equal flag.
-Thus a deliberately custom share equal to the equal share reloads as an equal split.
-This is a current format limitation, not a guarantee of preserving user intent.
+#### Named splits and exact cent allocation
 
-#### Design considerations
+`Parser` routes `owe` and `settle` to `ExpenseCommandParser`; creation remains in
+`SplitCommandParser`. `ArgumentParser` recognises `p/`, `paid/` and `rate/`, and each
+feature parser explicitly permits its own prefixes. Missing, empty or repeated
+required/optional values are rejected before constructing commands.
 
-Aspect: Representing shared bills.
+`p/Alice,Bob` contains the other `n - 1` people, excluding the user. Names are
+trimmed and lowercased with `Locale.ROOT`, must be unique ignoring case, and cannot
+contain comma, slash, pipe or line breaks. A supplied `paid/NAME` must occur in
+that participant list. Unnamed splits continue to record spending but assign no
+individual debts.
 
-- Alternative 1 (current choice): A split is an expense subtype.
-  - Pros: Existing reports automatically use the personal cost.
-  - Cons: Full bill and personal share require clearly distinguished meanings.
-- Alternative 2: Store split bills separately.
-  - Pros: Isolates group-specific operations.
-  - Cons: Reports must merge collections and avoid double counting.
+Without `paid/`, the user paid the bill and each named person owes their allocated
+part. With `paid/Alice`, only the user's own share owed to Alice is tracked; the
+application does not model debts between other people. `getAmountsOwedToMe()`
+returns an insertion-ordered map so leftover cents follow the participant order.
+The essential allocation, expressed as pseudocode, is:
 
-Aspect: Scope of repayment tracking.
+```text
+remainingCents = round((fullSgdBill - mySgdShare) * 100)
+baseCents = remainingCents / numberOfOtherPeople       (integer division)
+extraCents = remainingCents % numberOfOtherPeople
+person[i] receives baseCents + 1 when i < extraCents, otherwise baseCents
+```
 
-- Alternative 1 (current choice): Personal spending only.
-  - Pros: No debt ledger to reconcile.
-  - Cons: No named debtors or allocation of leftover cents among participants.
-- Alternative 2 (planned): Separate named debts and settlements.
-  - Pros: Tracks repayments without counting them again as expenses.
-  - Cons: Requires a rounding-allocation rule, new storage and consistency tests.
+For `split d/Dinner a/100 n/3 p/Alice,Bob`, own share is $33.33, Alice owes $33.34,
+and Bob owes $33.33. The three shares sum to $100.00. Allocation order is distinct
+from ledger display order: `owe` uses a `TreeSet` to show names alphabetically.
+`MoneyUtil.format` provides fixed-locale cents and thousands separators in both
+debt directions, e.g. `$1,234.50`.
 
-`SplitCommandParserTest` and `SplitExpenseTest` cover input rules and split calculations;
-storage and reporting tests cover reuse of the same expenses. Direct construction
-relies on validated inputs, so new entry points must not bypass boundary checks.
+#### Debt calculation and settlement execution
+
+`OweCommand` and `SettleCommand.calculateNetBalance` derive the person's balance
+from current splits and prior payments rather than maintain a mutable debt cache:
+
+```text
+net(person) = incoming split shares - outgoing own shares - signed settlements
+```
+
+A positive net means the person owes the user; a negative net means the user owes
+them. Positive stored settlement amounts represent money received by the user;
+negative amounts represent money paid. Half-cent tolerances are used when testing
+whether a balance is effectively settled. The optional `owe p/NAME` filters net
+output; it does not currently list individual contributing splits.
+
+For a successful `settle p/Alice a/10`, the command recomputes the balance before
+recording the payment. Without `a/`, it uses the full absolute balance. A supplied
+payment must be positive, finite, cent-precision and within the outstanding
+balance; a zero balance or excessive payment throws `TripJioException` before an
+append. The sign comes from the balance, not from user-supplied signed input.
+
+![successful settlement and automatic saving](images/SettlementSequence.svg)
+
+The sequence shows a successful partial payment. UI printing and AppState getters
+are omitted. The calculation self-call scans applicable split shares and signed
+payments as described above. On rejected input, execution stops before the new
+Settlement is created and the main loop does not save that command.
+
+Settlement does not change expenses, budgets or category/trip totals. Editing or
+deleting a historical split recalculates its debt contribution while retaining
+old payments, so the net can reverse direction. There is no payment-edit or undo
+command. This is a boundary that maintainers must preserve and explain.
+
+#### Atomic custom-share edits and currency units
+
+`EditCommand` rejects `my/` on an ordinary/foreign personal expense before changing
+its amount. For a split, it combines the supplied bill/share with retained values
+and calls `updateAmounts`. That method validates the final pair before assigning
+either field. An excerpt from the implementation's model shows the mutation boundary:
+
+```java
+validateShare(total, numberOfPeople, share);
+MoneyUtil.validateOriginalAmount(total);
+amount = total;
+customShare = share;
+```
+
+`edit 1 a/30 my/10` can therefore replace an old $90 bill with a $40 custom share:
+the new pair is valid even though the old share exceeded the new bill. Conversely,
+`edit 1 a/30 d/Changed` fails with the old custom share and leaves all fields
+unchanged. Equal splits recompute their share; a custom share stays fixed unless
+explicitly edited. The user's share must be at least $0.01 and no more than the
+full bill; the participant count remains 2 through 50.
+
+Foreign split creation requires both `cur/CURRENCY` and an explicit `rate/RATE`,
+measured in SGD per original unit. It does not look up the configured personal-
+expense rate table. Rate and currency validation reuse `ExchangeRates` helpers;
+conversion uses `ExchangeRates.toSgd(double, double)` and cent rounding. Validation
+checks the converted SGD bill cap, not an arbitrary cap on the original number.
+
+| Input/operation in the split implementation | Unit and behaviour |
+| --- | --- |
+| Creation `a/100 cur/EUR rate/1.45` | Original bill EUR 100 becomes SGD 145 |
+| Creation/edit `my/45` | Own share SGD 45, not EUR 45 |
+| Split `edit INDEX a/150` | Replacement full bill SGD 150, retaining saved metadata |
+| Personal `ForeignExpense` amount edit | Original currency, using its saved BigDecimal rate |
+| Split storage/load | Bill/share already SGD; never reconvert |
+
+These are the current semantics, which differ from the early v2 planning notes.
+`ForeignExpense` uses BigDecimal half-up conversion; the split helper uses doubles
+and Math.round. Unifying those conversions and foreign-edit conventions is a
+future design decision, not an implemented currency-value abstraction.
+
+#### Split persistence and migration
+
+The format keeps the first seven fields in their legacy order and appends payer,
+comma-separated participants, currency, rate and a custom-share boolean:
+
+```text
+S|description|sgdBill|people|sgdShare|category|date|payer|participants|currency|rate|hasCustomShare
+S|Dinner|100.00|3|33.33|FOOD|01-10-2026||alice,bob|||false
+```
+
+The loader accepts exactly seven or twelve fields. Old lines infer custom status
+as before; new lines preserve an explicit custom share even when numerically equal
+to the equal share. Empty trailing fields are retained during splitting. Currency
+rates are written in plain decimal notation. Signed `[owe]` amounts use
+`MoneyUtil.toStorageString` so payment records consistently contain two decimals.
+
+![restoration without a second currency conversion](images/SplitLoadSequence.svg)
+
+The static loader validates persisted descriptions inside the model, without an
+ArgumentParser import, then restores the already-converted bill. The private
+constructor's `alreadyConverted` path prevents the saved rate being applied again.
+The surrounding Storage loader skips invalid supported records with a warning;
+valid records continue loading. Older versions cannot load the extended format, so keep a backup before downgrading.
+
+#### Design considerations and verification
+
+Aspect: Computing debt after expense edits.
+
+- Alternative 1 (current choice): Recompute from splits and signed payments on each query.
+  - Pros: No cached balances to synchronize after bill/share edits.
+  - Cons: Linear scans, and aggregation is currently duplicated by owe and settle.
+- Alternative 2: Store a separate mutable balance per person.
+  - Pros: Faster queries over a large history.
+  - Cons: Every edit/delete must correctly reverse prior effects; stale balances are harder to diagnose.
+
+Aspect: Preserving split intent and currency history.
+
+- Alternative 1 (current choice): Extend the S record, persist the flag and store converted SGD totals.
+  - Pros: Old records load and saved foreign splits are not converted twice.
+  - Cons: The flag cannot recover intent missing from old records; split metadata does not retain a separately editable original bill.
+- Alternative 2: New versioned currency-value records for all expenses.
+  - Pros: Could unify rounding and edit units across personal and split expenses.
+  - Cons: Requires a broader migration and team-wide agreement on semantics.
+
+The implementation's `ReviewFeedbackTest` covers cent allocation, legacy/extended round-trips,
+foreign metadata, both settlement directions, partial/full payments and rejected
+combined edits. `OweCommandTest` checks alphabetical order, large amounts and a
+German default locale. `SplitExpenseTest` checks legacy/extended description
+validation; `TripJioTest` exercises actual save/restart/settle input loops. These
+tests exercise the shared application workflow rather than a separate ledger-only state.
+
+`SplitCommandTest` protects the affected-month contract. Full-loop tests in
+`TripJioTest` verify threshold/exceeded warnings from ordinary and converted
+splits, and confirm that a small custom share does not warn based on the full bill.
 
 ### Trip management and selected-trip reporting
 
@@ -701,8 +834,9 @@ Aspect: When to resolve the rate.
   - Cons: Historical budgets would change without expense edits; live lookup also
     introduces availability and reproducibility problems.
 
-The base reporting currency remains SGD. Foreign-currency splits are planned, not
-implemented. `TravelFeaturesTest` covers conversion, rate changes and persistence.
+The base reporting currency remains SGD. Shared bills use their own explicit
+`cur/` plus `rate/` input as described in Shared-bill expenses; personal foreign
+expenses continue to use configured manual rates. `TravelFeaturesTest` covers conversion, rate changes and persistence.
 
 ### [Proposed] Export to CSV
 
@@ -864,7 +998,10 @@ Stories marked *planned* are not implemented yet.
 | `* *` | traveller planning several trips | keep, edit and delete named trips | review the spending of each trip separately |
 | `* *` | traveller | view spending statistics by category | check how much I spend each month or trip |
 | `* *` | traveller | compare my spending across two months | understand changes in my spending habits |
-| `* *` | group traveller | track who owes me money and record repayments (*planned*) | know who still owes me |
+| `* *` | group traveller | name the participants and bill payer | identify who owes whom |
+| `* *` | group traveller | record full or partial repayments | see the remaining net balance |
+| `* *` | group traveller | safely edit my own share | correct my spending without partially changing the bill |
+| `* *` | traveller | split a foreign bill using an explicit rate | count my share and debts in SGD |
 | `*` | student | export my spending (*planned*) | analyse it outside the app |
 
 ## Non-functional requirements
@@ -890,6 +1027,9 @@ The following are design targets and maintenance constraints, not measured bench
 - **Global index:** One-based position in the complete expense or trip list.
 - **Selected trip:** The explicitly active trip; selection may be absent.
 - **Personal share:** The portion of a split bill counted as the user's expense.
+- **Full bill:** The entire group purchase, distinct from personal spending.
+- **Signed settlement:** Positive money received or negative money paid by the user.
+- **Net balance:** Incoming split shares minus outgoing own shares minus signed payments.
 - **Rate snapshot:** Conversion rate stored with a foreign expense at creation time.
 - **Mutating command:** A command whose successful execution requests saving.
 - **Affected month:** Month returned by a command for the post-execution budget check.
@@ -952,3 +1092,28 @@ its own setup; start with a fresh isolated directory when indexes would otherwis
 3. Reverse the months and confirm change signs reverse; an empty month yields zeros.
 4. Run `list sort/amount order/desc`; verify descending personal SGD amounts and
    original global indexes. Reports must not change the stored collection.
+
+
+### Shared-bill integration and persistence
+
+Use a new isolated folder for each independent scenario; expense dates must be in the past.
+
+1. Set `budget set a/100 m/10-2026`, then create
+   `split d/Dinner a/270 n/3 dt/20-10-2026`. Expect a warning with $90 spent,
+   not $270. Add an $11 own share to cross the budget and check the exceeded warning.
+2. In an empty instance add `split d/Dinner a/100 n/3 p/Alice,Bob dt/01-10-2026`.
+   Own share is $33.33; Alice owes $33.34 and Bob $33.33. Record a $10 repayment
+   from Alice, restart, then check Alice's $23.34 balance and unchanged spending.
+3. Create a custom split with bill $90 and share $40. `edit 1 a/30 d/Changed`
+   fails unchanged; `edit 1 a/30 my/10` succeeds. Do this in its own empty folder.
+4. Save/reload a deliberately custom $30 share on a $90 three-person bill, then
+   change its bill to $120. Own share stays $30, proving the custom flag survived.
+5. In a new folder create `split d/Hotel a/100 n/3 p/Alice,Bob paid/Alice cur/EUR rate/1.45 my/45 dt/01-10-2026`.
+   Restart: full bill remains SGD 145 and own share/debt SGD 45. Verify the saved
+   rate was not applied again. `edit 1 a/150` changes the full SGD bill only.
+6. In a disposable file, load a legacy seven-field S record then save/restart.
+   It remains a SplitExpense. A malformed extended record warns without preventing
+   another valid record from loading. New twelve-field records preserve all metadata.
+7. Fully settle a named bill, then delete its split. The payment remains and net
+   debt may reverse; this behaviour must agree with the UG. Do not expect settlement
+   to change budget totals, and do not expect bill deletion to delete payments.

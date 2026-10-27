@@ -1,0 +1,54 @@
+@startuml
+!pragma layout smetana
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam ArrowColor #53657A
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam classBorderColor #60758A
+skinparam classBackgroundColor #E3F3EF
+skinparam classAttributeIconSize 0
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam sequenceLifeLineBorderColor #A5B1BE
+skinparam sequenceGroupBackgroundColor #F4F6F9
+skinparam maxMessageSize 180
+hide empty members
+hide footbox
+title Restore an already-converted split
+participant "storage: Storage" as Store #FBE7D5
+participant "SplitExpense\n<<class>>" as Factory #E3F3EF
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+activate Store
+note over Store, Factory
+  Input is a valid extended S record:
+  stored SGD bill $145, share $45, EUR rate 1.45.
+  Static factory call and successful path shown.
+end note
+Store -> Factory ++ : fromStorageString(line)
+note right of Factory
+  Validate description, amounts, people,
+  metadata and flag before construction.
+  Helper calls are omitted here.
+end note
+create participant "restored: SplitExpense" as Restored #E3F3EF
+Factory -> Restored : new SplitExpense(...,\nalreadyConverted=true)
+activate Restored
+note right of Restored
+  Restores full SGD bill $145.
+  Own share is still $45.
+  Saved rate is not applied again.
+end note
+Restored --> Factory : restored object
+deactivate Restored
+Factory --> Store -- : restored object
+Store -> Expenses ++ : add(restored)
+Expenses --> Store --
+note over Store, Expenses
+  AppState getters and surrounding file I/O omitted.
+  Invalid supported records warn and are skipped.
+end note
+deactivate Store
+@enduml
