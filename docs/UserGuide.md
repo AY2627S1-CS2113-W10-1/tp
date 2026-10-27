@@ -314,6 +314,7 @@ Error: Invalid index: 9. You have 3 expenses.
 
 ---
 
+<!-- @@author teetoozs -->
 ### Sorting expenses
 
 ```text
@@ -327,11 +328,13 @@ Descending is the default when a sort is supplied. Without sorting, insertion
 order is unchanged. Equal values retain insertion order. `order/` requires
 `sort/`. Displayed indexes remain the original indexes for editing/deleting;
 sorting does not rearrange or save the underlying records.
+<!-- @@author -->
 
 ---
 
 ## Exchange rates
 
+<!-- @@author teetoozs -->
 All existing amounts and budgets are interpreted as **SGD**. Reports continue to
 use the dollar symbol for SGD. This version does not fetch live exchange rates
 or support changing the reporting currency.
@@ -343,8 +346,10 @@ rate set from/EUR to/SGD r/1.45
 rate list
 add d/Lunch a/12 c/food dt/10-10-2026 cur/EUR
 ```
+<!-- @@author -->
 
 The example rate means **1 EUR = 1.45 SGD**, not the reverse.
+<!-- @@author teetoozs -->
 Supply a rate yourself by searching online; these are not live quotes. Rates
 must be positive plain decimals, at most 1000000, with up to eight decimal places.
 Original foreign-currency amounts may exceed 1,000,000. They must be positive,
@@ -357,6 +362,7 @@ original EUR amount and rate are displayed and saved. Updating EUR's rate affect
 only subsequently added expenses. `edit INDEX a/10` on this expense means EUR 10
 using its original saved rate. Currency/rate changes on an existing expense are
 not supported; delete and re-add if necessary. Without `cur/`, amounts remain SGD.
+<!-- @@author -->
 `cur/SGD` uses rate 1 automatically for personal expenses. Foreign splits instead
 require explicit `cur/` and `rate/`; see [Foreign splits](#splitting-a-foreign-currency-bill).
 
@@ -668,6 +674,7 @@ No warning is shown if that month has no budget.
 
 ## Trips
 
+<!-- @@author teetoozs -->
 ### Setting Trip Dates: `trip set`
 Updates the selected trip's dates without changing other trips. With an empty trip
 list it creates and selects Original trip. If trips exist but none is selected,
@@ -685,9 +692,11 @@ use `trip select INDEX` first.
 * **Notes**:
   * A successful command replaces the current trip dates and automatically saves them to `data/tripjio.txt`.
   * If the command is invalid (e.g. end date before start date), the existing trip remains unchanged.
+<!-- @@author -->
 
 ---
 
+<!-- @@author teetoozs -->
 ### Viewing Trip Status: `trip status`
 Displays the configured trip dates, status (Upcoming, Ongoing, or Completed), duration, remaining days, and recorded spending between the start and end dates.
 
@@ -709,9 +718,11 @@ Displays the configured trip dates, status (Upcoming, Ongoing, or Completed), du
   Remaining trip days (including today): 2
   Recorded spending during trip: $60.30
   ```
+<!-- @@author -->
 
 ---
 
+<!-- @@author teetoozs -->
 ### Multiple trips
 
 ```text
@@ -730,9 +741,11 @@ other trips. With no trips, `trip set` creates and selects `Original trip`.
 If trips exist but none is selected, `trip set` and `trip status` report:
 `No trip selected` and explain how to select one. Use `trip list`, then
 `trip select INDEX`; the application never chooses a trip silently.
+<!-- @@author -->
 
 ---
 
+<!-- @@author teetoozs -->
 ### Editing and deleting trips
 
 ```text
@@ -769,9 +782,11 @@ Trip spending still includes all expenses within the selected trip's dates,
 including both boundaries. Expenses are **not assigned exclusively to trips**:
 overlapping trips can count the same expense. Selecting a trip does not filter
 `list`, `stats`, or budgets, which remain global/month-based.
+<!-- @@author -->
 
 ---
 
+<!-- @@author teetoozs -->
 ### Selected-trip filtering
 
 ```text
@@ -801,11 +816,13 @@ shows zeros and `No expenses match the selected trip filter.`
 List and split list use their existing empty-filter messages.
 Filtering is read-only, does not assign expenses to trips, and does not change
 budgets, saved data or the selected trip. Overlapping trips can include the same expense.
+<!-- @@author -->
 
 ---
 
 ## Statistics
 
+<!-- @@author teetoozs -->
 ### Monthly Spending by Category: `stats`
 Generates a breakdown of your spending across all six categories for a selected month, followed by total spending.
 
@@ -835,6 +852,7 @@ Generates a breakdown of your spending across all six categories for a selected 
   TOTAL SPENT: $42.80
   ==============================
   ```
+<!-- @@author -->
 
 ---
 
@@ -931,6 +949,7 @@ EUR=1.45
 
 > **Caution:** if a line in the file is in an invalid format, TripJio skips that line when starting and shows a warning such as `Error: Skipped invalid line 4 in data file: ...`. The other lines are still loaded. Make a backup of the file before editing it.
 
+<!-- @@author teetoozs -->
 ### Saved-data compatibility
 
 Existing `E|` and `S|` expenses and the legacy `[trip]` section still load.
@@ -942,6 +961,7 @@ Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
 one of them; no `A|` line means no trip selected. Invalid selection names produce
 a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
+<!-- @@author -->
 Split records keep the legacy first seven fields and add metadata:
 
 ```text
@@ -955,9 +975,11 @@ Legacy seven-field records still load; their custom status is inferred from the
 saved amounts because the old file cannot express that distinction. Bills/shares
 in split records are already SGD, so rates are not applied again on load.
 Settlements are saved separately in `[owe]` with signed two-decimal amounts.
+<!-- @@author teetoozs -->
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
 releases do not understand the new records.
+<!-- @@author -->
 
 ---
 
