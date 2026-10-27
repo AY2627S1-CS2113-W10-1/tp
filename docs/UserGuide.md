@@ -379,6 +379,44 @@ Whenever you add or edit an expense, TripJio automatically evaluates your spendi
    Warning: You have exceeded your budget for October 2026! Spent: $1,050.00 / $1,000.00 ($50.00 over budget).
    ```
 
+#### Forecasting Monthly Spending: `forecast`
+Forecasts your projected total spending by the end of the month based on your current spending pace, comparing it against your monthly budget.
+
+* **Format**: `forecast [m/MONTH]`
+* **Parameters**:
+  * `[m/MONTH]`: Optional month in `MM-YYYY` format. If omitted, forecasts the **current ongoing month**.
+* **Formula**:
+  $$\text{Projected Total Spending} = \frac{\text{Spent so far}}{\text{Days passed}} \times \text{Days in month}$$
+* **Examples**:
+  * `forecast`
+  * `forecast m/10-2026`
+* **Expected Output (Current Month - On Track)**:
+  ```text
+  Spending forecast for October 2026:
+    Budget: $1,000.00
+    Spent so far (day 10 of 31): $200.00
+    Current pace: $20.00/day
+    Projected total spending: $620.00
+    Status: On track to stay within budget ($380.00 buffer remaining).
+  ```
+* **Expected Output (Current Month - Projected to Exceed)**:
+  ```text
+  Spending forecast for October 2026:
+    Budget: $500.00
+    Spent so far (day 10 of 31): $250.00
+    Current pace: $25.00/day
+    Projected total spending: $775.00
+    Status: Projected to exceed budget by $275.00!
+  ```
+* **Expected Output (Past Month)**:
+  ```text
+  Spending forecast for September 2026:
+    Note: This month has already ended.
+    Budget: $800.00
+    Total spent: $500.00
+    Status: Stayed within budget ($300.00 remaining).
+  ```
+
 ---
 
 ### 4. Trip Dates & Management
@@ -531,6 +569,7 @@ no trip selected. The old `[trip]` section is used only when `[trips]` is absent
 | **Delete Expense**| `delete INDEX` | `delete 2` |
 | **Set Budget** | `budget set a/AMOUNT [m/MONTH]` | `budget set a/800 m/11-2026` |
 | **Budget Status** | `budget status [m/MONTH]` | `budget status` |
+| **Forecast Spending** | `forecast [m/MONTH]` | `forecast m/10-2026` |
 | **Set Trip Dates** | `trip set s/START_DATE e/END_DATE` | `trip set s/10-12-2026 e/24-12-2026` |
 | **Trip Status** | `trip status` | `trip status` |
 | **Monthly Statistics** | `stats [m/MONTH]` | `stats m/10-2026` |
