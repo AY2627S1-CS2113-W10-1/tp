@@ -218,6 +218,7 @@ Shows a list of all available commands and their syntax formats.
   budget status [m/MONTH]
   trip set s/START_DATE e/END_DATE
   trip status
+  trip budget a/AMOUNT
   stats [m/MONTH]
   stats compare m/MONTH m/MONTH
   exit
@@ -421,6 +422,24 @@ Forecasts your projected total spending by the end of the month based on your cu
 
 ### 4. Trip Dates & Management
 
+#### Setting a Trip Budget: `trip budget`
+Sets an overall budget for the currently selected trip.
+
+* **Format**: `trip budget a/AMOUNT`
+* **Parameters**:
+  * `a/AMOUNT`: The total budget allocated for the selected trip. Must be a positive amount up to `$1,000,000.00` with at most 2 decimal places.
+* **Example**:
+  ```text
+  trip budget a/1500
+  ```
+* **Output**:
+  ```text
+  Budget for trip Japan set to $1,500.00.
+  ```
+* **Notes**:
+  * Requires a trip to be currently selected (e.g. via `trip select INDEX` or `trip add`). If no trip is selected, an error prompts you to select or create a trip first.
+  * The trip budget is saved automatically with the trip in `data/tripjio.txt`.
+
 #### Setting Trip Dates: `trip set`
 Updates the selected trip's dates without changing other trips. With an empty trip
 list it creates and selects Original trip. If trips exist but none is selected,
@@ -570,6 +589,7 @@ no trip selected. The old `[trip]` section is used only when `[trips]` is absent
 | **Set Budget** | `budget set a/AMOUNT [m/MONTH]` | `budget set a/800 m/11-2026` |
 | **Budget Status** | `budget status [m/MONTH]` | `budget status` |
 | **Forecast Spending** | `forecast [m/MONTH]` | `forecast m/10-2026` |
+| **Set Trip Budget** | `trip budget a/AMOUNT` | `trip budget a/1500` |
 | **Set Trip Dates** | `trip set s/START_DATE e/END_DATE` | `trip set s/10-12-2026 e/24-12-2026` |
 | **Trip Status** | `trip status` | `trip status` |
 | **Monthly Statistics** | `stats [m/MONTH]` | `stats m/10-2026` |

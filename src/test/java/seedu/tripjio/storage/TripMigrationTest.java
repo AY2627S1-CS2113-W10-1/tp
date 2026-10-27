@@ -151,4 +151,20 @@ class TripMigrationTest {
         assertFalse(trip.contains(start.plusDays(2)));
         assertFalse(trip.contains(null));
     }
+
+    @Test
+    void tripStorage_withBudget_loadsBudgetAndSkipsInvalidBudget() throws Exception {
+        AppState state = load("[trips]\nT|BudgetTrip|01-02-2020|10-02-2020|1200.50\n"
+                + "T|BadBudget|01-03-2020|10-03-2020|not_a_number\n"
+                + "A|BudgetTrip\n");
+        assertEquals(1, state.getTrips().displayLines().size());
+        assertEquals("BudgetTrip", state.getTrips().getCurrentName());
+        assertTrue(state.getTrip().hasBudget());
+        assertEquals(1200.50, state.getTrip().getBudget());
+        assertTrue(output.toString().contains("Skipped invalid line 3"));
+
+        AppState restored = roundTrip(state);
+        assertTrue(restored.getTrip().hasBudget());
+        assertEquals(1200.50, restored.getTrip().getBudget());
+    }
 }
