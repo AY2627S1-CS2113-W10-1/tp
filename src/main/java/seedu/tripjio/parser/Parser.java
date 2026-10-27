@@ -49,6 +49,8 @@ public class Parser {
         case "list":
         case "edit":
         case "delete":
+        case "owe":
+        case "settle":
             return ExpenseCommandParser.parse(commandWord, args);
         case "split":
             return SplitCommandParser.parse(args);
