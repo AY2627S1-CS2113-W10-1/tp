@@ -1,0 +1,56 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam sequenceParticipantBorderColor #60758A
+skinparam sequenceLifeLineBorderColor #A5B1BE
+skinparam sequenceGroupBorderColor #8D9BAD
+skinparam sequenceGroupBackgroundColor #F4F6F9
+title [Proposed] Executing "export m/10-2026 trip/"
+participant "app: TripJio" as App #E8EDF3
+participant "c: ExportCommand" as Cmd #E2EDFC
+participant "ExpenseFilter" as Filter #E3F3EF
+participant "CsvExporter" as Csv #FBEBD8
+participant "e: Expense" as Exp #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+
+activate App
+App -> Cmd : execute(state, ui)
+activate Cmd
+Cmd -> Filter : select(state, null, month, true)
+activate Filter
+Filter --> Cmd : matching expenses
+deactivate Filter
+opt no expense matches
+Cmd -> Ui : showMessage("No expenses match ...")
+note right of Cmd : returns here;\nno file is written
+end
+Cmd -> Csv : toCsvLines(indexedExpenses)
+activate Csv
+loop each matching expense
+Csv -> Exp : toCsvFields(index)
+activate Exp
+note right : overridden by\nsubclasses
+Exp --> Csv : fields
+deactivate Exp
+end
+Csv --> Cmd : lines (header first)
+deactivate Csv
+Cmd -> Csv : write(path, lines)
+activate Csv
+note right : IOException is turned\ninto TripJioException
+Csv --> Cmd
+deactivate Csv
+Cmd -> Ui : showMessage(...)
+activate Ui
+Ui --> Cmd
+deactivate Ui
+Cmd --> App
+deactivate Cmd
+note over App, Ui : isMutating() is false, so the data file is not saved again.
+deactivate App
+@enduml
