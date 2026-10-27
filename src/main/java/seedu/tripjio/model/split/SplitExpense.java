@@ -4,7 +4,6 @@ import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.expense.ExchangeRates;
-import seedu.tripjio.parser.ArgumentParser;
 import seedu.tripjio.util.DateUtil;
 import seedu.tripjio.util.MoneyUtil;
 
@@ -204,6 +203,11 @@ public class SplitExpense extends Expense {
         if ((fields.length != 7 && fields.length != 12) || !fields[0].equals("S")) {
             throw new TripJioException("Invalid split expense storage line.");
         }
+        // Storage validation belongs to the model and must not depend on the command parser.
+        String description = fields[1].trim();
+        if (description.isEmpty() || description.contains("/")) {
+            throw new TripJioException("Invalid description in split expense storage line.");
+        }
         try {
             double total = Double.parseDouble(fields[2]);
             int people = Integer.parseInt(fields[3]);
@@ -234,7 +238,7 @@ public class SplitExpense extends Expense {
                 }
                 custom = fields[11].equals("true") ? share : null;
             }
-            return new SplitExpense(ArgumentParser.parseDescription(fields[1]), total, people, custom,
+            return new SplitExpense(description, total, people, custom,
                     Category.fromString(fields[5]), DateUtil.parseDate(fields[6]), names, payer, currency, rate, true);
         } catch (IllegalArgumentException e) {
             throw new TripJioException("Invalid number in split expense storage line.");

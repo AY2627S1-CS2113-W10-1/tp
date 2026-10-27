@@ -11,11 +11,30 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for {@link SplitExpense}.
  */
 public class SplitExpenseTest {
+
+    @Test
+    public void fromStorageString_invalidDescription_rejectsLegacyAndExtendedRecords() {
+        for (String description : new String[] {"", "   ", "Dinner/Taxi"}) {
+            String legacy = "S|" + description + "|90.00|3|30.00|FOOD|14-10-2026";
+            assertThrows(TripJioException.class, () -> SplitExpense.fromStorageString(legacy));
+            assertThrows(TripJioException.class,
+                    () -> SplitExpense.fromStorageString(legacy + "||alice,bob|||false"));
+        }
+    }
+
+    @Test
+    public void fromStorageString_validDescription_preservesUnicodeAndTrimsWhitespace() throws TripJioException {
+        SplitExpense expense = SplitExpense.fromStorageString("S|  Phở dinner  |90.00|3|30.00|FOOD|14-10-2026");
+        assertEquals("Phở dinner", expense.getDescription());
+        assertEquals(90.00, expense.getTotalAmount());
+        assertEquals(30.00, expense.getMyShare());
+    }
 
     @Test
     public void getMyShare_noCustomShare_returnsEqualSplit() {

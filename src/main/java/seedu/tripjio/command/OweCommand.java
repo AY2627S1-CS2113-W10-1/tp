@@ -5,14 +5,15 @@ import seedu.tripjio.model.expense.Expense;
 import seedu.tripjio.model.split.Settlement;
 import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.ui.Ui;
+import seedu.tripjio.util.MoneyUtil;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Locale;
 
-/** Shows each person's net SGD balance after combining shared bills and recorded settlements. */
+/** Shows net SGD balances in alphabetical name order after combining splits and settlements. */
 public class OweCommand extends Command {
     /** Null selects all people; otherwise only this person's balance is displayed. */
     private final String targetPerson;
@@ -50,7 +51,7 @@ public class OweCommand extends Command {
         }
 
         ui.showMessage("=== Debt Ledger ===");
-        Set<String> allPeople = new HashSet<>(owedToMe.keySet());
+        Set<String> allPeople = new TreeSet<>(owedToMe.keySet());
         allPeople.addAll(iOwe.keySet());
 
         boolean hasDebt = false;
@@ -63,9 +64,9 @@ public class OweCommand extends Command {
             if (Math.abs(net) > 0.005) {
                 hasDebt = true;
                 if (net > 0) {
-                    ui.showMessage(person + " owes you: $" + String.format(Locale.ROOT, "%.2f", net));
+                    ui.showMessage(person + " owes you: " + MoneyUtil.format(net));
                 } else {
-                    ui.showMessage("You owe " + person + ": $" + String.format(Locale.ROOT, "%.2f", Math.abs(net)));
+                    ui.showMessage("You owe " + person + ": " + MoneyUtil.format(Math.abs(net)));
                 }
             }
         }
