@@ -1,0 +1,54 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+
+title Setting a monthly budget (validated inputs)
+
+participant "app: TripJio" as App #E8EDF3
+participant "parser: Parser" as Parser #E8EDF3
+participant "bParser: BudgetCommandParser" as BParser #E8EDF3
+participant "command: SetBudgetCommand" as Cmd #E2EDFC
+participant "state: AppState" as State #E3F3EF
+participant "budget: Budget" as Budget #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+participant "storage: Storage" as Storage #E8EDF3
+
+activate App
+App -> Parser ++ : parse("budget set a/1500 m/12-2026")
+Parser -> BParser ++ : parse("set a/1500 m/12-2026")
+create Cmd
+BParser -> Cmd : new SetBudgetCommand(1500.0, 2026-12)
+activate Cmd
+Cmd --> BParser
+deactivate Cmd
+BParser --> Parser -- : command
+Parser --> App -- : command
+
+App -> Cmd ++ : execute(state, ui)
+Cmd -> State ++ : getBudget()
+State --> Cmd -- : budget
+Cmd -> Budget ++ : setForMonth(2026-12, 1500.0)
+Budget --> Cmd --
+Cmd -> Ui ++ : showMessage("Budget for December 2026 set to $1,500.00.")
+Ui --> Cmd --
+Cmd --> App --
+
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : true
+
+opt isMutating() is true
+    App -> Storage ++ : save(state)
+    Storage -> State ++ : getBudget()
+    State --> Storage -- : budget
+    Storage -> Budget ++ : toStorageLines()
+    Budget --> Storage -- : lines
+    Storage --> App -- : saved
+end
+
+deactivate App
+@enduml

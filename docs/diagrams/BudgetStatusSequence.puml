@@ -1,0 +1,46 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+
+title Viewing budget status and daily allowance
+
+participant "app: TripJio" as App #E8EDF3
+participant "command: BudgetStatusCommand" as Cmd #E2EDFC
+participant "state: AppState" as State #E3F3EF
+participant "budget: Budget" as Budget #E3F3EF
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+
+activate App
+App -> Cmd ++ : execute(state, ui)
+Cmd -> State ++ : getBudget()
+State --> Cmd -- : budget
+Cmd -> Budget ++ : getBudgetFor(month)
+Budget --> Cmd -- : budgetAmount
+
+Cmd -> State ++ : getExpenses()
+State --> Cmd -- : expenses
+Cmd -> Expenses ++ : getTotalSpentInMonth(month)
+Expenses --> Cmd -- : spent
+
+note right of Cmd
+  Calculates:
+  remaining = budgetAmount - spent
+  For current month:
+  daysLeft = days in month - today + 1
+  dailyAllowance = remaining / daysLeft
+end note
+
+Cmd -> Ui ++ : showMessage(...)
+Ui --> Cmd --
+Cmd --> App --
+
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : false
+deactivate App
+@enduml
