@@ -1,0 +1,51 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam classBorderColor #60758A
+skinparam classBackgroundColor #E3F3EF
+skinparam classHeaderBackgroundColor #E3F3EF
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+title [Proposed] Classes involved in export
+abstract class Command {
+  +execute(state, ui)
+}
+class ExportCommand {
+  -category: Category
+  -month: YearMonth
+  -tripOnly: boolean
+  +execute(state, ui)
+}
+class ExportCommandParser {
+  +{static} parse(args): Command
+}
+class CsvExporter {
+  +{static} HEADER: String
+  +{static} toCsvLines(expenses): List<String>
+  +{static} escape(field): String
+  +{static} write(path, lines)
+}
+class ExpenseFilter {
+  +{static} select(state, category, month, tripOnly): List<Expense>
+}
+class Expense {
+  +toCsvFields(index): List<String>
+}
+class SplitExpense {
+  +toCsvFields(index): List<String>
+}
+class ForeignExpense {
+  +toCsvFields(index): List<String>
+}
+Command <|-- ExportCommand
+ExportCommandParser ..> ExportCommand : creates
+ExportCommand ..> ExpenseFilter : uses
+ExportCommand ..> CsvExporter : uses
+CsvExporter ..> Expense : calls toCsvFields()
+Expense <|-- SplitExpense
+Expense <|-- ForeignExpense
+@enduml
