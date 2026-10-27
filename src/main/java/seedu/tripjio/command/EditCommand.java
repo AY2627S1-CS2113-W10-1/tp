@@ -25,6 +25,9 @@ public class EditCommand extends Command {
     /** Month of the expense after editing, known only once the command has run. */
     private YearMonth affectedMonth;
 
+    /** Date of the expense after editing, known only once the command has run. */
+    private LocalDate affectedDate;
+
     /**
      * Creates a command to edit an expense. All given values must already be validated by the parser,
      * and at least one of them must not be null.
@@ -70,6 +73,7 @@ public class EditCommand extends Command {
         }
 
         affectedMonth = expense.getMonth();
+        affectedDate = expense.getDate();
         ui.showMessage("Edited expense:", "  " + expense);
     }
 
@@ -87,5 +91,15 @@ public class EditCommand extends Command {
     @Override
     public YearMonth getAffectedMonth() {
         return affectedMonth;
+    }
+
+    /**
+     * Returns the date of the expense after editing, so that the budget of the trip containing that date is checked.
+     *
+     * @return Date of the edited expense, or null if the command has not run successfully.
+     */
+    @Override
+    public LocalDate getAffectedDate() {
+        return affectedDate;
     }
 }

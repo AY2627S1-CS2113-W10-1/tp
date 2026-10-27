@@ -369,8 +369,10 @@ Displays your current budget progress, total money spent, remaining allowance, a
   ```
 
 #### Automatic Budget Warnings
-Whenever you add or edit an expense, TripJio automatically evaluates your spending against the month's budget. If your spending reaches or exceeds designated thresholds, a warning message is automatically displayed after the command output:
+Whenever you add, edit, or split an expense, TripJio automatically evaluates your spending against your budgets:
 
+##### Monthly Budget Warnings
+If your spending reaches or exceeds designated thresholds for the affected month, a warning is displayed after the command:
 1. **80% Spending Warning** (Triggered when monthly spending reaches 80% to 100% of the budget):
    ```text
    Warning: You have used 80% or more of your budget for October 2026! Spent: $800.00 / $1,000.00 ($200.00 remaining).
@@ -379,6 +381,19 @@ Whenever you add or edit an expense, TripJio automatically evaluates your spendi
    ```text
    Warning: You have exceeded your budget for October 2026! Spent: $1,050.00 / $1,000.00 ($50.00 over budget).
    ```
+
+##### Trip Budget Warnings
+If the expense date falls within the currently selected trip's date range and the trip has an allocated budget (set via `trip budget a/AMOUNT`), TripJio also checks the trip's overall spending:
+1. **80% Trip Spending Warning** (Triggered when trip spending reaches 80% to 100% of the trip budget):
+   ```text
+   Warning: You have used 80% or more of your budget for trip Japan! Spent: $800.00 / $1,000.00 ($200.00 remaining).
+   ```
+2. **Trip Budget Exceeded Warning** (Triggered when trip spending exceeds 100% of the trip budget):
+   ```text
+   Warning: You have exceeded your budget for trip Japan! Spent: $1,050.00 / $1,000.00 ($50.00 over budget).
+   ```
+> [!NOTE]
+> Trip warnings evaluate against the **currently selected trip only**, not every configured trip that contains the expense date. If an expense also causes your monthly budget threshold to be crossed, both warnings are shown.
 
 #### Forecasting Monthly Spending: `forecast`
 Forecasts your projected total spending by the end of the month based on your current spending pace, comparing it against your monthly budget.

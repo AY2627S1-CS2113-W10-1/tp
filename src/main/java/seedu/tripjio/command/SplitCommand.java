@@ -55,4 +55,9 @@ public class SplitCommand extends Command {
     public YearMonth getAffectedMonth() {
         return affectedMonth;
     }
+
+    @Override
+    public LocalDate getAffectedDate() {
+        return date;
+    }
 }

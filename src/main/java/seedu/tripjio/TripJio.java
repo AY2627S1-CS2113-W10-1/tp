@@ -4,10 +4,12 @@ import seedu.tripjio.command.Command;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
 import seedu.tripjio.model.budget.BudgetChecker;
+import seedu.tripjio.model.trip.Trip;
 import seedu.tripjio.parser.Parser;
 import seedu.tripjio.storage.Storage;
 import seedu.tripjio.ui.Ui;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
@@ -57,6 +59,7 @@ public class TripJio {
                 Command command = Parser.parse(input);
                 command.execute(state, ui);
                 showBudgetWarning(command.getAffectedMonth());
+                showTripBudgetWarning(command.getAffectedDate());
 
                 if (command.isMutating()) {
                     storage.save(state);
@@ -75,6 +78,21 @@ public class TripJio {
         }
         double spent = state.getExpenses().getTotalSpentInMonth(month);
         String warning = BudgetChecker.check(state.getBudget(), spent, month);
+        if (warning != null) {
+            ui.showMessage(warning);
+        }
+    }
+
+    private void showTripBudgetWarning(LocalDate date) {
+        if (date == null || !state.getTrips().hasCurrent()) {
+            return;
+        }
+        Trip trip = state.getTrip();
+        if (!trip.hasBudget() || !trip.contains(date)) {
+            return;
+        }
+        double spent = state.getExpenses().getTotalSpentBetween(trip.getStart(), trip.getEnd());
+        String warning = BudgetChecker.checkTrip(trip, state.getTrips().getCurrentName(), spent);
         if (warning != null) {
             ui.showMessage(warning);
         }

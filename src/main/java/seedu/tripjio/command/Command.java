@@ -4,6 +4,7 @@ import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
 import seedu.tripjio.ui.Ui;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
@@ -46,6 +47,17 @@ public abstract class Command {
      * @return Month to check the budget of, or null if no budget check is needed.
      */
     public YearMonth getAffectedMonth() {
+        return null;
+    }
+
+    /**
+     * Returns the date whose spending was changed by this command. The main loop checks the budget of the trip
+     * containing this date and shows a warning if needed, so {@code add}, {@code edit} and {@code split} must
+     * override this.
+     *
+     * @return Date to check the trip budget of, or null if no trip budget check is needed.
+     */
+    public LocalDate getAffectedDate() {
         return null;
     }
 }
