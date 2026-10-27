@@ -98,9 +98,9 @@ With TripJio you can:
 | `DATE` | `DD-MM-YYYY`, must be a real date | `01-09-2026` |
 | `MONTH` | `MM-YYYY` | `10-2026` |
 | `PEOPLE` (`n/` in `split`) | Whole number from 2 to 50, **including you** | `3` |
-| `MY_SHARE` | Same rules as `AMOUNT`, and not more than the full bill | `40` |
+| `MY_SHARE` | Your SGD share, at least 0.01, at most two decimals and no more than the converted full bill | `40` |
+| `NAMES` (`p/` in `split`) | Exactly n - 1 other names, comma-separated and unique ignoring case; no empty names, `/`, `\|` or line breaks | `Alice,Bob` |
 | `NAME` (`n/` in `trip`) | Trip name, same rules as `DESCRIPTION`, unique (case-insensitive) | `Japan` |
-| `NAMES` (`p/` in `split`) | Exactly `n - 1` distinct other people, comma-separated; no empty names, `/`, `\|` or line breaks | `Alice,Bob` |
 | `CURRENCY` | Three-letter currency code (case-insensitive) | `EUR`, `JPY` |
 | `RATE` | How many SGD one unit of the currency is worth. Positive, up to 8 decimal places, at most 1,000,000 | `1.45` |
 | `sort/` | `amount` or `date` (lowercase) | `sort/amount` |
@@ -263,8 +263,8 @@ Format: `edit INDEX [d/DESCRIPTION] [a/AMOUNT] [c/CATEGORY] [dt/DATE] [my/MY_SHA
 * For a **split expense**, `a/AMOUNT` changes the **full bill**:
   * If the bill was split equally, your share is recalculated as the new bill divided by the number of people.
   * If you gave your own share with `my/`, your share stays the same and only the full bill changes. The new bill cannot be less than your share.
-  * Use `my/MY_SHARE` to change your own SGD share; it must be at least $0.01 and no more than the full bill. You can supply `a/` and `my/` together; invalid edits leave the whole record unchanged.
-  * The full bill entered through `edit` is always in SGD, including for a foreign split. To change the number of people, delete the split expense and add it again.
+  * Change your own SGD share with `my/`, alone or with `a/`; the final pair is validated before any field changes. This is available only for splits.
+  * On any split, including foreign splits, `a/` is the full SGD bill. To change the people/names/payer, delete and re-add; prior settlements remain.
 
 Examples:
 
@@ -357,110 +357,236 @@ original EUR amount and rate are displayed and saved. Updating EUR's rate affect
 only subsequently added expenses. `edit INDEX a/10` on this expense means EUR 10
 using its original saved rate. Currency/rate changes on an existing expense are
 not supported; delete and re-add if necessary. Without `cur/`, amounts remain SGD.
-`cur/SGD` uses rate 1 automatically for personal expenses. Foreign splits require
-both `cur/CURRENCY` and `rate/RATE`; see [Named splits and settling debts](#named-splits-and-settling-debts).
+`cur/SGD` uses rate 1 automatically for personal expenses. Foreign splits instead
+require explicit `cur/` and `rate/`; see [Foreign splits](#splitting-a-foreign-currency-bill).
 
 ---
 
 ## Split expenses
 
-Use this when you share a bill with friends, e.g. a group dinner or a shared taxi. TripJio records **only your share** as your expense, so your budget and statistics show what **you** actually spent.
+Use splits for a shared dinner, taxi or other group purchase. TripJio keeps the
+full bill but counts **only your own SGD share** in budgets and reports. Named
+participants also let you track repayments; those payments do not count as spending.
 
 ### Splitting a group expense: `split`
 
-Adds a group expense and records your share of it.
-
 Format: `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAMES] [paid/NAME] [cur/CURRENCY rate/RATE]`
 
-* `TOTAL_AMOUNT` is the **full bill** for the whole group.
-* `PEOPLE` is the number of people sharing the bill, **including you**.
-* By default, the bill is split equally: your share is `TOTAL_AMOUNT / PEOPLE`, rounded to 2 decimal places.
-  Your share must be at least $0.01, so a very small bill cannot be split among many people.
-* If you did not pay an equal share (e.g. you ordered more), use `my/MY_SHARE` to give your actual share. `MY_SHARE` is in SGD and must be at least $0.01 and no more than the converted full bill.
-* `CATEGORY` and `DATE` work the same way as in [`add`](#adding-an-expense-add).
-* A split expense appears in `list` like a normal expense and can be edited or deleted with `edit` and `delete`.
+* `TOTAL_AMOUNT` is the full bill. Without currency options it is in SGD, with at
+  most two decimal places and a maximum of SGD 1,000,000.
+* `PEOPLE` is a whole number from 2 to 50, **including you**.
+* Without `my/`, your share is the bill divided by the number of people, rounded
+  to cents. Your share must be at least SGD 0.01.
+* `my/` sets a fixed custom share in **SGD**. It must be at least SGD 0.01, have at
+  most two decimal places and not exceed the converted full bill.
+* Category defaults to `other`; date defaults to today. An expense date cannot be
+  in the future. Category/date rules match [`add`](#adding-an-expense-add).
+* `p/` and `paid/` are optional; their rules are explained below. Foreign bills
+  require both `cur/` and `rate/`, as described in [Foreign splits](#splitting-a-foreign-currency-bill).
+* After a successful split, TripJio checks that month's budget using **your share**
+  and saves. A warning does not reject the purchase.
 
-Examples:
+Example, starting with no expenses:
 
-* `split d/Group dinner a/90 n/3 c/food dt/14-10-2026`
-* `split d/Hotpot a/120 n/4 my/40 c/food`
-
-Expected output:
-
+```text
+split d/Dinner a/90 n/3 c/food dt/14-10-2026
 ```
+
+Expected output, before any budget warning:
+
+```text
 Got it. I've added this split expense:
-  [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
-Now you have 3 expenses in the list.
+  [Food] Dinner - $30.00 (14-10-2026) (Split among 3)
+Now you have 1 expense in the list.
 ```
 
----
+For a custom share, use `split d/Taxi a/60 n/3 my/10 dt/15-10-2026`.
+The bill is SGD 60 and your spending is SGD 10. An equal split of the same bill
+would count SGD 20. Split creation does not add a second ordinary expense.
 
 ### Listing split expenses: `split list`
 
-Shows only your split expenses, with your SGD share and the number of people.
-
 Format: `split list [m/MONTH] [trip/]`
 
-Example: `split list m/10-2026`
+This shows split expenses only. The displayed amount is your SGD share, followed
+by the number of people; it does not display the full bill. Without filters, it
+includes every month. `m/` narrows the month and `trip/` requires a selected trip;
+combined filters intersect, including both trip boundary dates.
 
-Expected output:
-
-```
-Here are your split expenses:
-3. [Food] Group dinner - $30.00 (14-10-2026) (Split among 3)
-5. [Food] Hotpot - $40.00 (20-10-2026) (Split among 4)
-```
-
-> The numbers shown are the same indexes as in `list`.
-
----
-
-### Named splits and settling debts
+After adding the Dinner and Taxi examples above, run `split list m/10-2026`:
 
 ```text
-split d/Dinner a/100 n/3 p/Alice,Bob
-split d/Taxi a/60 n/2 p/Alice paid/Alice
-split d/Hotel a/100 n/3 p/Alice,Bob cur/EUR rate/1.45 my/45
-owe
-owe p/Alice
-settle p/Alice a/10
-settle p/Alice
+Here are your split expenses:
+1. [Food] Dinner - $30.00 (14-10-2026) (Split among 3)
+2. [Other] Taxi - $10.00 (15-10-2026) (Split among 3)
 ```
 
-`n/` includes you. Optional `p/` lists exactly `n - 1` other participants,
-separated by commas. Names are case-insensitive and must be distinct and non-empty;
-they cannot contain commas, `/`, `|`, or line breaks. Omit `paid/` when you paid
-the bill. Otherwise, `paid/` must name someone in `p/`. Unnamed splits still count
-your spending but cannot assign debts to individual people.
+Numbers remain **global expense indexes**, including when ordinary expenses are
+interspersed or filters hide rows. Use those indexes for edit/delete; list again
+after deletion because later indexes shift. Sorting/filtering other views does
+not change saved order.
 
-`owe` shows each person's net balance across all splits and settlements, in SGD,
-with names in alphabetical order and amounts formatted with thousands separators;
-`owe p/NAME` filters it to one person. `settle p/NAME a/AMOUNT` records a partial
-payment; omitting `a/` settles the full outstanding balance. Payments must be positive
-SGD amounts with at most two decimal places and cannot exceed the outstanding balance.
-Settlement direction is determined from that balance. Settlements do not change expenses
-or budget spending. If there is no balance, settlement reports an error.
+With no splits, output is `You have no split expenses yet.` With a month/trip
+filter matching none, it is `No split expenses match the given filter.` If a trip
+filter is requested with no selection, an error is shown instead of an empty list.
 
-Settlements are stored independently of split expenses. Editing or deleting a split
-keeps its recorded payments, so the recalculated balance can reverse direction.
-For example, if Alice paid you $30 and you then delete the split that created her
-$30 debt, `owe` shows that you owe Alice $30 because her payment is still recorded.
-There is currently no command to edit or delete a settlement.
+### Naming participants and the payer
 
-For foreign splits, `a/` is the original-currency bill and `rate/` is SGD per unit
-of that currency. Both `cur/` and `rate/` are required together; configured `rate set`
-values are not used for splits. The full bill is converted and rounded to SGD cents
-once, then split. `my/` is always your custom share in **SGD**. For example, the hotel
-bill above is SGD 145, with your share fixed at SGD 45. Rates follow the manual-rate
-rules above; an explicit SGD rate must be 1. The converted bill is capped at SGD
-1,000,000 and your share must be at least SGD 0.01 and no more than the bill.
-Remaining cents are distributed to named participants in list order.
+`p/Alice,Bob` lists exactly `n - 1` **other people**, excluding you. Names must be
+non-empty, distinct ignoring case, and separated by commas. They cannot contain
+`/`, `|`, commas within a name, or line breaks. Surrounding whitespace is trimmed;
+names are compared case-insensitively and shown in lowercase.
 
-`edit INDEX a/AMOUNT` on any split changes the full bill in **SGD**, including for a
-foreign split; its saved currency and rate remain as historical input metadata.
-An equal share is recalculated, while a custom share stays fixed. Use
-`edit INDEX my/AMOUNT` to set your custom SGD share, or supply `a/` and `my/` together.
-The final bill and share are validated together; rejected edits leave all fields unchanged.
+* Without `paid/`, **you paid the whole bill** and the named people owe you.
+* With `paid/Alice`, **Alice paid the bill** and you owe Alice your own share.
+  The payer must appear in `p/`. TripJio does not track debts between other people.
+* A split without names still counts your spending, but has no individual debtor
+  or creditor in `owe`. You cannot add/change its names or payer with edit; delete
+  and re-add it, taking care of any existing payments as explained below.
+
+Example in a fresh instance:
+
+```text
+split d/Dinner a/100 n/3 p/Alice,Bob dt/14-10-2026
+```
+
+Your equal share is SGD 33.33. Remaining cents are distributed in **participant
+list order**, so the shares add up to the full bill:
+
+| Person | SGD share |
+| --- | --- |
+| You | 33.33 |
+| Alice (first name) | 33.34 |
+| Bob (second name) | 33.33 |
+| Total | 100.00 |
+
+Reversing the names changes who receives the extra cent. With `my/`, the same
+rule divides the remainder after your fixed share among the other people.
+
+### Viewing debts: `owe`
+
+Format: `owe [p/NAME]`
+
+Shows net balances across **all** named splits and settlements. It does not apply
+month or trip filters. Names appear alphabetically, with amounts in SGD and two
+decimal places; large amounts use thousands separators, e.g. `$1,234.50`.
+
+For the named SGD 100 Dinner above, `owe` prints:
+
+```text
+=== Debt Ledger ===
+alice owes you: $33.34
+bob owes you: $33.33
+```
+
+Use `owe p/ALICE` to show only Alice, ignoring case. If another person paid, a
+negative net is shown as `You owe alice: $30.00`, for example. A person may owe you
+on one bill and be owed on another; only the net is shown, not a per-bill history.
+
+If there is no outstanding balance in the selected view, including an unknown
+name filter, the message is `All debts are settled!`. `owe` does not change data.
+
+### Recording repayments: `settle`
+
+Format: `settle p/NAME [a/AMOUNT]`
+
+Records a payment against that person's current net balance. Omit `a/` to settle
+it fully. Otherwise give a positive **SGD** payment with at most two decimals,
+no larger than the outstanding balance. The direction is automatic: a person who
+owes you pays you; if you owe them, you pay them. Do not enter a negative payment.
+
+Continuing the named Dinner example:
+
+```text
+settle p/Alice a/10
+owe p/Alice
+```
+
+Expected output (separators omitted):
+
+```text
+Recorded settlement of $10.00 with alice.
+=== Debt Ledger ===
+alice owes you: $23.34
+```
+
+Then `settle p/alice` records SGD 23.34 and `owe p/alice` shows that she is settled.
+Bob still owes SGD 33.33. Your spending remains SGD 33.33 throughout. Restarting
+restores both the split and payments, so the balances do not reset.
+
+For the other direction, start fresh with
+`split d/Taxi a/60 n/2 p/Alice paid/Alice`. You owe Alice SGD 30; `settle p/alice`
+records that outgoing payment and clears the balance. Settlement never creates
+an expense or changes your monthly/trip spending.
+
+**Payments survive bill changes.** Editing or deleting a split does not remove
+recorded settlements. The balance is recalculated and can reverse direction.
+For example, if Alice repays a SGD 30 debt and you delete the only split that
+created it, `owe` shows that you owe Alice SGD 30 because her payment remains.
+There is currently no command to edit/delete a settlement or undo a payment.
+
+### Editing your share: `edit INDEX my/AMOUNT`
+
+`my/` is available only on split expenses. It sets a fixed custom SGD share,
+including when it happens to equal the current equal share. The share must be at
+least one cent and no more than the full SGD bill. To change participant count,
+names, payer or currency/rate, delete and re-add the split; this retains any prior
+settlements, as explained above.
+
+Example in a fresh instance:
+
+```text
+split d/Custom a/90 n/3 my/40 dt/14-10-2026
+edit 1 a/30 my/10
+```
+
+The final bill becomes SGD 30 and own share SGD 10. The proposed pair is checked
+together, so lowering both is valid. `edit 1 a/5 d/Changed` would then fail without
+changing bill, share or description. A full-bill edit recalculates an equal share
+but retains a custom share unless you also supply `my/`.
+
+### Splitting a foreign-currency bill
+
+Supply **both** `cur/CURRENCY` and `rate/RATE`. The rate means SGD per original
+currency unit. It is entered explicitly for the split; configured `rate set`
+values are not used. Rates must be positive plain decimals, up to eight decimal
+places and at most 1,000,000; an explicit SGD rate must be 1.
+
+Example in a fresh instance:
+
+```text
+split d/Hotel a/100 n/3 p/Alice,Bob paid/Alice cur/EUR rate/1.45 my/45 dt/14-10-2026
+owe p/Alice
+```
+
+The full EUR 100 bill becomes SGD 145. Your `my/45` is **SGD 45**, not EUR 45,
+and `owe` shows `You owe alice: $45.00`. Without `my/`, own share would be SGD 48.33.
+The original full amount can exceed 1,000,000, but must be positive, finite and
+cent-precision; the **converted full SGD bill** is capped at SGD 1,000,000.
+Conversions rounding your share below a cent are rejected.
+
+The saved bill/share are already in SGD; restarting does not convert them again.
+Changing a configured rate does not revalue an existing split. Unlike a personal
+foreign expense, **`edit INDEX a/150` on a split means a full SGD bill of 150**,
+retaining its saved currency/rate as historical metadata and its SGD 45 custom
+share. Personal foreign-expense edits still use the original currency and saved
+rate as described under [Editing an expense](#editing-an-expense-edit).
+
+### Split and repayment input errors
+
+Rejected commands leave existing records unchanged. Typical examples:
+
+| Input | Result |
+| --- | --- |
+| `split d/Bad a/10 n/1` | Number of people must be between 2 and 50. |
+| `split d/Bad a/90 n/3 my/100` | Your custom share cannot be more than the total bill. |
+| `split d/Bad a/90 n/3 p/Alice,ALICE` | Participant names must be unique ignoring case. |
+| `split d/Bad a/90 n/3 p/Alice,Bob paid/Charlie` | Payer must appear in the participant list. |
+| `split d/Bad a/90 n/3 cur/EUR` | Provide cur/ and rate/ together. |
+| `settle p/Nobody` with no balance | No outstanding balance; no payment is recorded. |
+
+Repeated/empty prefixes are rejected. A payment above the current balance is
+also rejected, with the allowable balance shown in the error message.
 
 ---
 
@@ -795,8 +921,9 @@ EUR=1.45
 
 * In the `[expense]` block, each line is one expense:
   * `E` lines are normal expenses: `E|DESCRIPTION|AMOUNT|CATEGORY|DATE`.
-  * `S` lines retain `S|DESCRIPTION|SGD_BILL|PEOPLE|SGD_SHARE|CATEGORY|DATE`, followed by payer, names, currency, rate and the custom-share flag; see [Saved-data compatibility](#saved-data-compatibility).
+  * `S` lines store a split's full SGD bill and own share, followed by payer, names, currency, rate and a custom-share flag; see [Saved-data compatibility](#saved-data-compatibility).
   * `F` lines are foreign-currency expenses: `F|DESCRIPTION|ORIGINAL_AMOUNT|CATEGORY|DATE|CURRENCY|RATE`.
+* `[owe]` contains `person|signedAmount` payments: positive means money you received, negative means money you paid. Payments are not expenses.
 * Amounts are written without a dollar sign or thousands separators, e.g. `1234.50`.
 * Dates use `DD-MM-YYYY` and months use `MM-YYYY`, the same as in commands.
 * Categories are written in capital letters, e.g. `FOOD`.
@@ -815,15 +942,19 @@ Each `T|NAME|START|END` line stores one trip. An optional `A|NAME` line selects
 one of them; no `A|` line means no trip selected. Invalid selection names produce
 a warning and leave no selection. Empty books remain empty after restarting.
 Foreign expenses use `F|description|originalAmount|category|date|currency|rate`.
-Split expenses retain the legacy fields
-`S|description|sgdBill|people|sgdShare|category|date` and append
-`|payer|participants|currency|rate|hasCustomShare`. Optional metadata uses empty fields;
-participants are comma-separated and the final flag is `true` or `false`.
-The flag preserves custom shares even when they happen to equal an equal split.
-Legacy seven-field records still load; their custom-share status is inferred by comparing
-the saved share with the equal share. Saved split bills and shares are already in SGD,
-so loading does not apply the rate again. `[owe]` records use `person|signedAmount`,
-with two decimal places: positive means money received and negative means money paid.
+Split records keep the legacy first seven fields and add metadata:
+
+```text
+S|description|sgdBill|people|sgdShare|category|date|payer|participants|currency|rate|hasCustomShare
+S|Dinner|100.00|3|33.33|FOOD|14-10-2026||alice,bob|||false
+```
+
+Empty optional metadata fields are retained. Names are comma-separated. The final
+true/false flag preserves a custom share even if it equals an equal share.
+Legacy seven-field records still load; their custom status is inferred from the
+saved amounts because the old file cannot express that distinction. Bills/shares
+in split records are already SGD, so rates are not applied again on load.
+Settlements are saved separately in `[owe]` with signed two-decimal amounts.
 Named trips and selection are stored under `[trips]`; manual rates under `[rates]`.
 Keep a backup before using this format with an older application release: older
 releases do not understand the new records.
@@ -835,14 +966,14 @@ releases do not understand the new records.
 **Q**: How do I transfer my data to another computer?<br>
 **A**: Install TripJio on the other computer, then copy your `data/tripjio.txt` into the `data` folder next to `tripjio.jar` there, replacing the file that TripJio creates.
 
-**Q**: Can I manually edit `data/tripjio.txt`?<br>
-**A**: Yes, but back up the file first. Supported blocks include `[expense]`, `[budget]`, `[trips]`, `[rates]` and `[owe]`. See [Editing the data file](#editing-the-data-file). Invalid supported records are skipped with warnings; a later save omits them.
-
 **Q**: Can I record expenses in other currencies (e.g. EUR, JPY)?<br>
 **A**: Yes. Set a rate first with `rate set from/EUR to/SGD r/1.45`, then add the expense with `cur/EUR`. Rates are entered by you, not fetched online, and all reports are in SGD. See [Exchange rates](#exchange-rates).
 
 **Q**: Does selecting a trip filter my expenses automatically?<br>
 **A**: No. `list`, `split list` and `stats` show only the selected trip's expenses when you add `trip/`. Budgets are always monthly.
+
+**Q**: Does a repayment change my budget, and what if I delete its bill?<br>
+**A**: A repayment changes only debt balances, not spending. Deleting a split keeps its payments and can reverse who owes whom. See [Recording repayments](#recording-repayments-settle).
 
 **Q**: My friends also want to use TripJio. Can we share data?<br>
 **A**: TripJio is a personal, single-user app. Each person keeps their own data. Use `split` to record your share of a group bill.
@@ -854,6 +985,7 @@ releases do not understand the new records.
 
 ## Known Issues
 
+* There is no settlement edit/delete or undo command. Payments remain when a split is edited/deleted; the resulting net balance can reverse direction.
 * In the data file, categories must be in capital letters (e.g. `FOOD`); lowercase categories are skipped as invalid lines.
 * Older versions of TripJio cannot read files saved by this version. Keep a backup before going back to an older release.
 
@@ -873,7 +1005,7 @@ releases do not understand the new records.
 | **Split group expense** | `split d/DESCRIPTION a/TOTAL_AMOUNT n/PEOPLE [my/MY_SHARE] [c/CATEGORY] [dt/DATE] [p/NAMES] [paid/NAME] [cur/CURRENCY rate/RATE]`<br>e.g. `split d/Group dinner a/90 n/3 c/food` |
 | **List split expenses** | `split list [m/MONTH] [trip/]`<br>e.g. `split list m/10-2026` |
 | **View debts** | `owe [p/NAME]`<br>e.g. `owe p/Alice` |
-| **Settle debt** | `settle p/NAME [a/AMOUNT]`<br>e.g. `settle p/Alice a/10` |
+| **Record repayment** | `settle p/NAME [a/AMOUNT]`<br>e.g. `settle p/Alice a/10` |
 | **Set monthly budget** | `budget set a/AMOUNT [m/MONTH]`<br>e.g. `budget set a/1000`, `budget set a/1500 m/12-2026` |
 | **View budget status** | `budget status [m/MONTH]`<br>e.g. `budget status` |
 | **Add trip** | `trip add n/NAME s/START_DATE e/END_DATE`<br>e.g. `trip add n/Japan s/01-12-2026 e/14-12-2026` |

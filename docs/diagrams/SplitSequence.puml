@@ -18,8 +18,8 @@ Cmd -> Split : new SplitExpense(..., 90, 3, null, ...)
 activate Split
 note right of Split
   Rounded equal share = $30.
-  Inherited Expense amount stores this share.
-  Full bill remains $90.
+  Inherited Expense amount stores the $90 bill.
+  Overridden getAmount() returns the $30 share.
 end note
 Split --> Cmd : constructed expense
 deactivate Split

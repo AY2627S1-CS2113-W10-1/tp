@@ -1,0 +1,57 @@
+@startuml
+!pragma layout smetana
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam ArrowColor #53657A
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam classBorderColor #60758A
+skinparam classBackgroundColor #E3F3EF
+skinparam classAttributeIconSize 0
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam sequenceLifeLineBorderColor #A5B1BE
+skinparam sequenceGroupBackgroundColor #F4F6F9
+skinparam maxMessageSize 180
+hide empty members
+hide footbox
+title Successful partial settlement
+participant "app: TripJio" as App #E8EDF3
+participant "cmd: SettleCommand" as Cmd #E2EDFC
+participant "payments: List<Settlement>" as Payments #E3F3EF
+participant "storage: Storage" as Store #FBE7D5
+activate App
+App -> Cmd ++ : execute(state, ui)
+Cmd -> Cmd ++ : calculateNetBalance(state, person)
+note right of Cmd
+  Scans current split shares and signed payments.
+  Example: Alice owes $33.34; pay $10.
+  Invalid/absent balance or excessive payment
+  throws before record creation and saving.
+end note
+Cmd --> Cmd -- : net = 33.34
+note right of Cmd
+  Validate the requested payment amount
+  and derive its sign from the net balance.
+  These are inline steps in execute().
+end note
+create participant "payment: Settlement" as Payment #E3F3EF
+Cmd -> Payment : new Settlement(person, +10.00)
+activate Payment
+Payment --> Cmd : payment
+deactivate Payment
+Cmd -> Payments ++ : add(payment)
+Payments --> Cmd --
+note over Cmd, Payments
+  UI output and AppState getters omitted.
+  No expense or budget amount is changed.
+end note
+Cmd --> App -- : return
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : true
+App -> Store ++ : save(state)
+Store --> App --
+deactivate App
+@enduml
