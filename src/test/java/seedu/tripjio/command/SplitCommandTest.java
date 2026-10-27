@@ -13,6 +13,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,9 +23,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Unit tests for {@link SplitCommand}.
  */
 public class SplitCommandTest {
-
     private AppState state;
     private Ui ui;
+
+    @Test
+    public void getAffectedMonth_usesExpenseDate() {
+        SplitCommand command = new SplitCommand("Dinner", 270, 3, null, Category.FOOD,
+                LocalDate.of(2026, 10, 20), new ArrayList<>(), null, null, null);
+        assertEquals(YearMonth.of(2026, 10), command.getAffectedMonth());
+    }
 
     @BeforeEach
     public void setUp() {

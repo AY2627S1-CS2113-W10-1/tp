@@ -8,6 +8,7 @@ import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.ui.Ui;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 /** Adds a shared bill whose SGD share contributes to the user's spending and debt ledger. */
@@ -60,5 +61,11 @@ public class SplitCommand extends Command {
     @Override
     public boolean isMutating() { 
         return true; 
+    }
+
+    /** Returns the split's month so the main loop checks spending against that month's budget. */
+    @Override
+    public YearMonth getAffectedMonth() {
+        return YearMonth.from(date);
     }
 }

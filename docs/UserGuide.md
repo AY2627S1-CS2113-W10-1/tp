@@ -441,6 +441,12 @@ SGD amounts with at most two decimal places and cannot exceed the outstanding ba
 Settlement direction is determined from that balance. Settlements do not change expenses
 or budget spending. If there is no balance, settlement reports an error.
 
+Settlements are stored independently of split expenses. Editing or deleting a split
+keeps its recorded payments, so the recalculated balance can reverse direction.
+For example, if Alice paid you $30 and you then delete the split that created her
+$30 debt, `owe` shows that you owe Alice $30 because her payment is still recorded.
+There is currently no command to edit or delete a settlement.
+
 For foreign splits, `a/` is the original-currency bill and `rate/` is SGD per unit
 of that currency. Both `cur/` and `rate/` are required together; configured `rate set`
 values are not used for splits. The full bill is converted and rounded to SGD cents
@@ -848,7 +854,6 @@ releases do not understand the new records.
 
 ## Known Issues
 
-* Split creation currently does not trigger an immediate monthly budget warning. Its SGD share still contributes to budget status and statistics.
 * In the data file, categories must be in capital letters (e.g. `FOOD`); lowercase categories are skipped as invalid lines.
 * Older versions of TripJio cannot read files saved by this version. Keep a backup before going back to an older release.
 

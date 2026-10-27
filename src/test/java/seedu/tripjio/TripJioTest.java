@@ -109,6 +109,40 @@ class TripJioTest {
         assertTrue(fourth.contains("All debts are settled!"));
     }
 
+    @Test
+    void run_splitReachesThresholdAndExceedsBudget_showsWarningsAndSaves() throws IOException {
+        String output = run("budget set a/100 m/10-2026",
+                "split d/Dinner a/270 n/3 dt/20-10-2026",
+                "split d/Taxi a/33 n/3 dt/20-10-2026");
+
+        assertFalse(output.contains("Error:"));
+        assertTrue(output.contains("Warning: You have used 80% or more of your budget for October 2026! "
+                + "Spent: $90.00 / $100.00"));
+        assertTrue(output.contains("Warning: You have exceeded your budget for October 2026! "
+                + "Spent: $101.00 / $100.00"));
+        assertTrue(readDataFile().contains("S|Dinner|270.00|3|90.00|"));
+        assertTrue(readDataFile().contains("S|Taxi|33.00|3|11.00|"));
+    }
+
+    @Test
+    void run_splitWithSmallCustomShare_doesNotWarnForFullBill() {
+        String output = run("budget set a/100 m/10-2026",
+                "split d/Dinner a/300 n/3 my/10 dt/20-10-2026");
+
+        assertFalse(output.contains("Error:"));
+        assertFalse(output.contains("Warning:"));
+    }
+
+    @Test
+    void run_foreignSplit_checksConvertedSgdShare() {
+        String output = run("budget set a/100 m/10-2026",
+                "split d/Hotel a/90 n/2 cur/EUR rate/2 dt/20-10-2026");
+
+        assertFalse(output.contains("Error:"));
+        assertTrue(output.contains("Warning: You have used 80% or more of your budget for October 2026! "
+                + "Spent: $90.00 / $100.00"));
+    }
+
     private static int countLines(String output, String line) {
         return (int) Arrays.stream(output.split("\n")).filter(line::equals).count();
     }
