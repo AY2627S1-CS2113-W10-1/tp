@@ -75,15 +75,20 @@ With TripJio you can:
 
 ### Notes about the command format
 
+### Notes about the command format
+
 * Words in `UPPER_CASE` are parameters you supply.<br>
   e.g. in `add d/DESCRIPTION a/AMOUNT`, `DESCRIPTION` and `AMOUNT` are parameters, as in `add d/Lunch a/12.50`.
 * Items in square brackets are optional.<br>
   e.g. `add d/DESCRIPTION a/AMOUNT [c/CATEGORY]` can be used as `add d/Lunch a/12.50 c/food` or as `add d/Lunch a/12.50`.
 * Parameters with a prefix (such as `d/` or `a/`) can be given in any order.<br>
   e.g. `add d/Lunch a/12.50` and `add a/12.50 d/Lunch` are both accepted.
-* `INDEX` refers to the number shown next to an expense in the most recent `list` output. It must be a positive whole number, e.g. 1, 2, 3.
+* Each prefix can be given only once. A prefix that the command does not use (e.g. `add d/Lunch a/5 s/01-10-2026`) is rejected with an error.
+* `trip/` is a flag: it takes no value, e.g. `list trip/`.
+* `INDEX` refers to the number shown next to an item in the most recent `list` (or `trip list`) output. It must be a positive whole number, e.g. 1, 2, 3.
 * Command words are case-insensitive: `LIST` and `list` both work.
 * Extra words after commands that take no parameters (such as `help` and `exit`) are ignored.
+* All amounts are in **SGD**, unless you add an expense with `cur/`. Then TripJio converts it to SGD with the rate you set (see [Exchange rates](#exchange-rates)).
 
 **Parameter formats**
 
@@ -92,9 +97,15 @@ With TripJio you can:
 | `DESCRIPTION` | Text, must not be empty and must not contain `/` or `\|` | `Lunch at canteen` |
 | `AMOUNT` | Positive number in SGD, up to 2 decimal places, at most 1,000,000 | `12.50` |
 | `CATEGORY` | One of: `food`, `transport`, `accommodation`, `entertainment`, `shopping`, `other` (case-insensitive) | `food` |
-| `DATE` | `DD-MM-YYYY` | `01-09-2026` |
+| `DATE` | `DD-MM-YYYY`, must be a real date | `01-09-2026` |
 | `MONTH` | `MM-YYYY` | `10-2026` |
-| `PEOPLE` | Whole number from 2 to 50, **including you** | `3` |
+| `PEOPLE` (`n/` in `split`) | Whole number from 2 to 50, **including you** | `3` |
+| `MY_SHARE` | Same rules as `AMOUNT`, and not more than the full bill | `40` |
+| `NAME` (`n/` in `trip`) | Trip name, same rules as `DESCRIPTION`, unique (case-insensitive) | `Japan` |
+| `CURRENCY` | Three-letter currency code (case-insensitive) | `EUR`, `JPY` |
+| `RATE` | How many SGD one unit of the currency is worth. Positive, up to 8 decimal places, at most 1,000,000 | `1.45` |
+| `sort/` | `amount` or `date` (lowercase) | `sort/amount` |
+| `order/` | `asc` or `desc` (lowercase), only together with `sort/`. Default: `desc` | `order/asc` |
 
 ---
 
