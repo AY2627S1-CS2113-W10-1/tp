@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Saves the user's data to a plain text file and loads it back when the application starts.
@@ -32,6 +33,8 @@ public class Storage {
     private static final String TRIPS_HEADER = "[trips]";
     private static final String RATES_HEADER = "[rates]";
     private static final String OWE_HEADER = "[owe]";
+
+    private static final Logger logger = Logger.getLogger(Storage.class.getName());
 
     /** Start of an expense line for a normal expense, e.g. "E|Lunch|12.50|FOOD|15-10-2026". */
     private static final String EXPENSE_TAG = "E|";
@@ -60,6 +63,7 @@ public class Storage {
      */
     public AppState load(Ui ui) {
         if (!Files.exists(filePath)) {
+            logger.info("No data file at " + filePath + ", starting with empty data.");
             return new AppState();
         }
 
@@ -67,6 +71,7 @@ public class Storage {
         try {
             lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            logger.warning("Could not read " + filePath + ": " + e.getMessage());
             ui.showError("Could not read data file. Starting with no data.");
             return new AppState();
         }
@@ -119,6 +124,7 @@ public class Storage {
                     loadLine(line, section, expenses, budget, trip);
                 }
             } catch (TripJioException | NumberFormatException e) {
+                logger.warning("Skipped invalid line " + lineNumber + ": " + e.getMessage());
                 ui.showError("Skipped invalid line " + lineNumber + " in data file: " + e.getMessage());
             }
         }
@@ -130,6 +136,7 @@ public class Storage {
             try {
                 state.getTrips().loadStorageLine(selections.get(i));
             } catch (TripJioException e) {
+                logger.warning("Skipped invalid line " + selectionLines.get(i) + ": " + e.getMessage());
                 ui.showError("Skipped invalid line " + selectionLines.get(i) + " in data file: " + e.getMessage());
             }
         }
@@ -183,6 +190,8 @@ public class Storage {
      * @throws TripJioException If the file cannot be written.
      */
     public void save(AppState state) throws TripJioException {
+        assert state != null : "State to save must not be null";
+
         List<String> lines = new ArrayList<>();
 
         lines.add(EXPENSE_HEADER);
@@ -222,6 +231,7 @@ public class Storage {
             // UTF-8 is always used so that descriptions such as "Phở" are saved correctly on every computer.
             Files.write(filePath, lines, StandardCharsets.UTF_8);
         } catch (IOException e) {
+            logger.warning("Could not save to " + filePath + ": " + e.getMessage());
             throw new TripJioException("Could not save data: " + e.getMessage());
         }
     }
