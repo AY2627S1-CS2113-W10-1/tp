@@ -8,7 +8,7 @@ import seedu.tripjio.model.expense.ExpenseFilter;
 import seedu.tripjio.model.trip.Statistics;
 import seedu.tripjio.ui.Ui;
 import seedu.tripjio.util.DateUtil;
-import seedu.tripjio.util.MoneyUtil;
+import seedu.tripjio.ui.SpendingTable;
 
 import java.time.YearMonth;
 import java.util.List;
@@ -28,15 +28,7 @@ public class TripStatsCommand extends Command {
         Map<Category, Double> totals = Statistics.getCategoryTotals(expenses);
         ui.showMessage("Spending for trip " + state.getTrips().getCurrentName()
                 + (month == null ? "" : " in " + DateUtil.formatMonth(month)) + ":");
-        double total = 0;
-        for (Category category : Category.values()) {
-            double amount = totals.get(category);
-            ui.showMessage(category.getDisplayName() + ": " + MoneyUtil.format(amount));
-            total += amount;
-        }
-        ui.showMessage("==============================",
-                "TOTAL SPENT: " + MoneyUtil.format(MoneyUtil.roundToCents(total)),
-                "==============================");
+        ui.showMessage(SpendingTable.format(totals, "Amount (SGD)"));
         if (expenses.isEmpty()) {
             ui.showMessage("No expenses match the selected trip filter.");
         }
