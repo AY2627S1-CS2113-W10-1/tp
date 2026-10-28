@@ -37,8 +37,8 @@ public class SettleCommand extends Command {
             MoneyUtil.validateAmount(amount);
             MoneyUtil.validateOriginalAmount(amount);
             if (amount > Math.abs(net) + 0.005) {
-                throw new TripJioException("Cannot settle more than the balance of $" 
-                        + String.format(Locale.ROOT, "%.2f", Math.abs(net)));
+                throw new TripJioException("Cannot settle more than the balance of "
+                        + MoneyUtil.format(Math.abs(net)) + ".");
             }
             settleAmount = amount;
         }
@@ -46,7 +46,7 @@ public class SettleCommand extends Command {
         double transactionAmount = net > 0 ? settleAmount : -settleAmount;
         state.getSettlements().add(new Settlement(person, transactionAmount));
 
-        ui.showMessage("Recorded settlement of $" + String.format(Locale.ROOT, "%.2f", settleAmount)
+        ui.showMessage("Recorded settlement of " + MoneyUtil.format(settleAmount)
                 + " with " + person + ".");
     }
 
