@@ -1003,6 +1003,9 @@ releases do not understand the new records.
 **Q**: Can I create my own categories?<br>
 **A**: Not at the moment. Use `other` for expenses that do not fit the six built-in categories.
 
+**Q**: Can I manually edit `data/tripjio.txt`?<br>
+**A**: Yes, but back up the file first. Supported blocks include `[expense]`, `[budget]`, `[trips]`, `[rates]` and `[owe]`. See [Editing the data file](#editing-the-data-file). Invalid supported records are skipped with warnings; a later save omits them.
+
 ---
 
 ## Known Issues
