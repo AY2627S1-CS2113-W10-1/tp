@@ -3,6 +3,7 @@ package seedu.tripjio.model.expense;
 import seedu.tripjio.exception.TripJioException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Currency;
 import java.util.List;
@@ -73,7 +74,9 @@ public class ExchangeRates {
         set(fields[0], fields[1]);
     }
 
+    /** Converts validated split inputs using the same decimal half-up rounding as personal foreign expenses. */
     public static double toSgd(double originalAmount, double rate) {
-        return Math.round(originalAmount * rate * 100.0) / 100.0;
+        return BigDecimal.valueOf(originalAmount).multiply(BigDecimal.valueOf(rate))
+                .setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
 }

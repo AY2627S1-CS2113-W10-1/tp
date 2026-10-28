@@ -56,6 +56,32 @@ class ReviewFeedbackTest {
     }
 
     @Test
+    void foreignSplit_halfCentConversionMatchesPersonalExpenseAndSurvivesRestart() throws TripJioException {
+        run("rate set from/USD to/SGD r/1.005");
+        run("add d/Personal a/1 cur/USD");
+        run("split d/Shared a/1 n/2 p/Alice cur/USD rate/1.005");
+
+        SplitExpense split = (SplitExpense) state.getExpenses().get(2);
+        assertEquals(1.01, state.getExpenses().get(1).getAmount());
+        assertEquals(state.getExpenses().get(1).getAmount(), split.getTotalAmount());
+        assertEquals(0.51, split.getMyShare());
+        assertEquals(0.50, split.getAmountsOwedToMe().get("alice"));
+
+        restart();
+        split = (SplitExpense) state.getExpenses().get(2);
+        assertEquals(1.01, split.getTotalAmount());
+        assertEquals(0.51, split.getMyShare());
+    }
+
+    @Test
+    void foreignSplit_halfCentAtMinimumDoesNotRejectValidShare() throws TripJioException {
+        run("split d/Small a/1 n/4 cur/USD rate/0.015");
+        SplitExpense split = (SplitExpense) state.getExpenses().get(1);
+        assertEquals(0.02, split.getTotalAmount());
+        assertEquals(0.01, split.getMyShare());
+    }
+
+    @Test
     void splitSaveRestart_keepsBillAndShare() throws TripJioException {
         run("split d/Dinner a/90 n/3");
         restart();
