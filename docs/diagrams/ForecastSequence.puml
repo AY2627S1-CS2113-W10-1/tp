@@ -1,0 +1,57 @@
+@startuml
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+
+title Forecasting monthly spending
+
+participant "app: TripJio" as App #E8EDF3
+participant "parser: Parser" as Parser #E8EDF3
+participant "fParser: ForecastCommandParser" as FParser #E8EDF3
+participant "command: ForecastCommand" as Cmd #E2EDFC
+participant "state: AppState" as State #E3F3EF
+participant "budget: Budget" as Budget #E3F3EF
+participant "expenses: ExpenseList" as Expenses #E3F3EF
+participant "ui: Ui" as Ui #EFE6F8
+
+activate App
+App -> Parser ++ : parse("forecast m/10-2026")
+Parser -> FParser ++ : parse("m/10-2026")
+create Cmd
+FParser -> Cmd : new ForecastCommand(2026-10)
+activate Cmd
+Cmd --> FParser
+deactivate Cmd
+FParser --> Parser -- : command
+Parser --> App -- : command
+
+App -> Cmd ++ : execute(state, ui)
+Cmd -> State ++ : getExpenses()
+State --> Cmd -- : expenses
+Cmd -> Expenses ++ : getTotalSpentInMonth(month)
+Expenses --> Cmd -- : spent
+
+Cmd -> State ++ : getBudget()
+State --> Cmd -- : budget
+Cmd -> Budget ++ : getBudgetFor(month)
+Budget --> Cmd -- : budgetAmount
+
+note right of Cmd
+  Current month linear projection:
+  daysPassed = today.getDayOfMonth()
+  projected = (spent / daysPassed) * totalDays
+  Compare projected against budgetAmount
+end note
+
+Cmd -> Ui ++ : showMessage(...)
+Ui --> Cmd --
+Cmd --> App --
+
+App -> Cmd ++ : isMutating()
+Cmd --> App -- : false
+deactivate App
+@enduml

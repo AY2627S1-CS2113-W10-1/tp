@@ -6,15 +6,18 @@ import seedu.tripjio.command.DeleteCommand;
 import seedu.tripjio.command.EditCommand;
 import seedu.tripjio.command.ListCommand;
 import seedu.tripjio.command.AddForeignExpenseCommand;
+import seedu.tripjio.command.OweCommand;
+import seedu.tripjio.command.SettleCommand;
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.expense.Category;
+import seedu.tripjio.model.split.SplitExpense;
 import seedu.tripjio.util.DateUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Parses the arguments of the expense commands: {@code add}, {@code list}, {@code edit} and {@code delete}.
+ * Parses the arguments of the expense commands.
  * All checks that only need the input text are done here, so the commands receive values that are already valid.
  */
 public class ExpenseCommandParser {
@@ -25,7 +28,7 @@ public class ExpenseCommandParser {
     /**
      * Returns the expense command described by the given command word and arguments.
      *
-     * @param commandWord One of "add", "list", "edit" or "delete", in lower case.
+     * @param commandWord One of "add", "list", "edit", "delete", "owe", or "settle", in lower case.
      * @param args Arguments after the command word.
      * @return Command to run.
      * @throws TripJioException If the arguments are invalid.
@@ -41,8 +44,11 @@ public class ExpenseCommandParser {
             return parseEdit(argParser);
         case "delete":
             return parseDelete(argParser);
+        case "owe":
+            return parseOwe(argParser);
+        case "settle":
+            return parseSettle(argParser);
         default:
-            // Parser only sends the four words above, so reaching here is a programming error.
             throw new AssertionError("Unexpected command word: " + commandWord);
         }
     }
@@ -70,7 +76,6 @@ public class ExpenseCommandParser {
         argParser.checkAllowedPrefixes("c", "m", "sort", "order", "trip");
         argParser.checkNoPreamble();
 
-        // null means "do not filter by this field".
         String categoryText = argParser.getOptional("c");
         Category category = (categoryText == null) ? null : Category.fromString(categoryText);
 
@@ -90,26 +95,29 @@ public class ExpenseCommandParser {
     }
 
     private static Command parseEdit(ArgumentParser argParser) throws TripJioException {
-        argParser.checkAllowedPrefixes("d", "a", "c", "dt");
+        // ADDED "my" to allowed prefixes
+        argParser.checkAllowedPrefixes("d", "a", "c", "dt", "my");
         int index = ArgumentParser.parseIndex(argParser.getPreamble());
 
-        // Each field is null when it is not given, meaning "keep the current value".
         String descriptionText = argParser.getOptional("d");
         String amountText = argParser.getOptional("a");
         String categoryText = argParser.getOptional("c");
         String dateText = argParser.getOptional("dt");
+        String myText = argParser.getOptional("my");
 
-        if (descriptionText == null && amountText == null && categoryText == null && dateText == null) {
-            throw new TripJioException("Please give at least one field to edit: d/, a/, c/ or dt/.");
+        if (descriptionText == null && amountText == null && categoryText == null 
+                && dateText == null && myText == null) {
+            throw new TripJioException("Please give at least one field to edit: d/, a/, c/, dt/ or my/.");
         }
 
         String description = (descriptionText == null) ? null : ArgumentParser.parseDescription(descriptionText);
-        // The target expense determines whether a/ is SGD or an original foreign-currency amount.
         Double amount = (amountText == null) ? null : ArgumentParser.parseOriginalAmount(amountText);
         Category category = (categoryText == null) ? null : Category.fromString(categoryText);
         LocalDate date = (dateText == null) ? null : parseDateNotInFuture(dateText);
+        Double customShare = (myText == null) ? null : ArgumentParser.parseAmount(myText);
 
-        return new EditCommand(index, description, amount, category, date);
+        // Updated constructor to pass customShare
+        return new EditCommand(index, description, amount, category, date, customShare);
     }
 
     private static Command parseDelete(ArgumentParser argParser) throws TripJioException {
@@ -117,13 +125,24 @@ public class ExpenseCommandParser {
         return new DeleteCommand(ArgumentParser.parseIndex(argParser.getPreamble()));
     }
 
-    /**
-     * Parses a date and checks that it is not after today, as required by the User Guide.
-     *
-     * @param text Date entered by the user, in the format DD-MM-YYYY.
-     * @return The parsed date.
-     * @throws TripJioException If the date is invalid or in the future.
-     */
+    private static Command parseOwe(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("p");
+        argParser.checkNoPreamble();
+        String person = argParser.getOptional("p");
+        return new OweCommand(person == null ? null : SplitExpense.parsePerson(person));
+    }
+
+    private static Command parseSettle(ArgumentParser argParser) throws TripJioException {
+        argParser.checkAllowedPrefixes("p", "a");
+        argParser.checkNoPreamble();
+        
+        String person = SplitExpense.parsePerson(argParser.getRequired("p"));
+        String amountText = argParser.getOptional("a");
+        Double amount = (amountText == null) ? null : ArgumentParser.parseAmount(amountText);
+        
+        return new SettleCommand(person, amount);
+    }
+
     private static LocalDate parseDateNotInFuture(String text) throws TripJioException {
         LocalDate date = DateUtil.parseDate(text);
         if (date.isAfter(LocalDate.now())) {

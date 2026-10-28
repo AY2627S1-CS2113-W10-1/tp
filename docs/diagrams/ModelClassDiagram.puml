@@ -1,0 +1,44 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam ArrowColor #53657A
+skinparam classBorderColor #60758A
+skinparam classBackgroundColor #E3F3EF
+skinparam classHeaderBackgroundColor #E3F3EF
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide empty members
+title Model component
+class AppState
+class ExpenseList
+class Expense {
+  +getAmount(): double
+  +setAmount(double)
+}
+class SplitExpense
+class ForeignExpense
+enum Category
+class Budget
+class TripBook
+class Trip
+class ExchangeRates
+class Settlement
+
+AppState *-- "1" ExpenseList
+AppState *-- "1" Budget
+AppState *-- "1" TripBook
+AppState *-- "1" ExchangeRates
+AppState --> "0..*" Settlement : settlements {ordered}
+ExpenseList *-- "*" Expense
+Expense <|-- SplitExpense
+Expense <|-- ForeignExpense
+Expense --> "1" Category
+TripBook *-- "*" Trip
+note bottom of Expense
+  getAmount() is always the user's
+  own SGD spending.
+end note
+@enduml

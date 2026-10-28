@@ -2,16 +2,22 @@
 
 ## Contents
 
-- [Purpose and implementation status](#purpose-and-implementation-status)
+- [Introduction](#introduction)
 - [Setting up and testing](#setting-up-and-testing)
 - [Architecture](#architecture)
+  - [Main loop](#main-loop)
+  - [Model component](#model-component)
+  - [Error handling and persistence boundaries](#error-handling-and-persistence-boundaries)
+- [Acknowledgements](#acknowledgements)
 - [Design & implementation](#design--implementation)
   - [Expense management](#expense-management)
-  - [Monthly budgets and warnings](#monthly-budgets-and-warnings)
+  - [Monthly budgets, warnings and forecasting](#monthly-budgets-warnings-and-forecasting)
+  - [Trip budgets, warnings and summary](#trip-budgets-warnings-and-summary)
   - [Shared-bill expenses](#shared-bill-expenses)
   - [Trip management and selected-trip reporting](#trip-management-and-selected-trip-reporting)
   - [Monthly statistics and comparison](#monthly-statistics-and-comparison)
   - [Manual currency conversion](#manual-currency-conversion)
+  - [[Proposed] Export to CSV](#proposed-export-to-csv)
 - [Maintaining the diagrams](#maintaining-the-diagrams)
 - [Product scope](#product-scope)
 - [User stories](#user-stories)
@@ -19,20 +25,25 @@
 - [Glossary](#glossary)
 - [Manual testing](#instructions-for-manual-testing)
 
-## Purpose and implementation status
+## Introduction
 
-TripJio is a local command-line spending tracker for students on exchange. This
-guide describes the code in this checkout, not every feature in the team's roadmap.
-It is intended for developers maintaining parsers, commands, models and persistence.
-For command syntax and end-user instructions, please see the [User Guide](UserGuide.md).
+TripJio is a budget tracker and travel app for students, operated through a
+command-line interface. It records personal and shared expenses, converts foreign
+purchases with rates the user enters, checks monthly budgets, and reports spending
+by month and by trip. All data stays in one local text file.
+
+This guide describes the code as it is now. It is intended for developers maintaining
+parsers, commands, models and persistence. For command syntax and end-user
+instructions, please see the [User Guide](UserGuide.md). Features that are planned
+but not implemented are marked as *planned* in [User stories](#user-stories).
 
 Implemented command families are expense add/list/edit/delete, split creation and
 listing, monthly budget configuration/status/warnings, named-trip management,
-manual exchange rates, monthly statistics/comparisons and selected-trip reports.
-Named split participants, repayments (`owe`/`settle`), foreign-currency splits,
-`edit ... my/`, trip budgets/summary, forecasting, export and recurring expenses
-are planned work, not available commands in this checkout. The global command-output
-separator and aligned monthly comparison table are implemented.
+manual exchange rates, monthly statistics/comparisons, selected-trip reports,
+trip budgets and overspending warnings, trip summary breakdowns and spending forecasting.
+Named split participants, repayments (`owe`/`settle`), foreign-currency splits
+and `edit ... my/` are also implemented. Export and recurring expenses remain planned work. The global command-output separator and aligned monthly comparison table
+are implemented.
 
 ## Setting up and testing
 
@@ -52,6 +63,14 @@ On macOS/Linux, use `./gradlew` in place of `.\gradlew.bat`. The entry point is
 style checks. Test results are written to `build/reports/tests/test/index.html`.
 The build does not currently configure JaCoCo: the test report is not a coverage report.
 
+Tests mirror the main source packages (e.g. `model/expense/ExpenseTest` tests
+`model/expense/Expense`). Commands are usually tested by calling `execute(state, ui)`
+with a `Ui` built on in-memory streams. To test the whole main loop, `TripJioTest`
+uses the `TripJio(String filePath, Ui ui)` constructor with fake input and a JUnit
+`@TempDir` data file, so tests never touch the real `data/tripjio.txt`. Expected output
+never depends on the day the tests run: tests either pass a fixed date or `Clock`, or
+compute dates relative to `LocalDate.now()` (e.g. tomorrow).
+
 The data path is `data/tripjio.txt`, relative to the process working directory.
 Run manual experiments in a separate directory with a copy of the packaged JAR;
 do not delete or overwrite real spending data to obtain a clean test environment.
@@ -61,6 +80,14 @@ do not delete or overwrite real spending data to obtain a clean test environment
 The application runs synchronously in one terminal process. `TripJio` constructs
 `Ui`, `Storage` and the loaded `AppState`, then repeatedly reads, parses and executes
 a command. There is no web backend, account service or live exchange-rate API.
+
+<img src="images/ArchitectureDiagram.svg" alt="TripJio architecture diagram" width="800">
+
+The diagram shows the main components and how they depend on each other.
+`TripJio` is the only class that knows about every component: it reads input
+through `Ui`, asks `Parser` for a `Command`, executes it on the shared model, and
+asks `Storage` to save. Commands only see the model and `Ui`; they never call
+`Storage` directly.
 
 | Component | Main types | Responsibility |
 | --- | --- | --- |
@@ -83,6 +110,55 @@ command, including errors, to separate successive responses.
 Commands depend on models and UI, while domain calculations do not print. Storage
 is a deliberate boundary exception: `load(Ui)` reports invalid-line warnings through
 the UI. The architecture does not introduce separate service interfaces or a database.
+
+### Main loop
+
+The sequence diagram below shows one iteration of the main loop for
+`add d/Lunch a/12.50 c/food`. Other commands follow the same steps; only the
+feature parser and the `Command` subclass differ. To keep the diagram small,
+`Parser` is drawn as a black box (it delegates to `ExpenseCommandParser`), and the
+budget check is a `ref` frame whose details are shown in the
+[budget warning sequence](#monthly-budgets-warnings-and-forecasting).
+
+<img src="images/AddCommandSequence.svg" alt="Main loop sequence for an add command" width="757">
+
+1. `Ui.readCommand()` returns the trimmed input line. At the end of input it returns
+   `exit`, so the loop always terminates.
+2. `Parser.parse` reads only the command word and hands the rest to the feature
+   parser (`ExpenseCommandParser` here). The feature parser validates every field and
+   creates the command, so an invalid command never reaches execution.
+3. `execute(state, ui)` changes the model and prints the result through `Ui`.
+4. The loop then asks the command three questions: `getAffectedMonth()` (check that
+   month's budget), `isMutating()` (save the file) and `isExit()` (stop the loop).
+   Commands therefore do not need to know about budgets or storage.
+5. `Ui.showLine()` prints a separator after every command, including failed ones,
+   so that successive responses are easy to tell apart.
+
+Adding a new command only requires a `Command` subclass, a feature parser (or a new
+case in an existing one) and one `case` line in `Parser`. The main loop does not change.
+
+### Model component
+
+<img src="images/ModelClassDiagram.svg" alt="Model component class diagram" width="718">
+
+The diagram shows only classes and their relationships; fields and most methods
+are left out and are described in the feature sections below. `AppState` holds one
+instance of each model class, and every command works on this shared state. `ExpenseList` stores all expenses in insertion order; its indexes
+are one-based to match what users see in `list`.
+
+`Expense` has two subclasses. `SplitExpense` stores the full bill and the number of
+people. Its inherited amount holds the full SGD bill, while overridden
+`getAmount()` returns the user's share. `ForeignExpense` stores
+the original amount, currency and rate, and keeps the converted SGD value in the
+inherited amount. Because of this, budgets, trip reports, sorting and statistics
+only call `getAmount()` and never need to check which kind of expense they have.
+Each subclass overrides `setAmount`, `toString` and `toStorageString` for the
+behaviour that is different.
+
+`Budget`, `TripBook` and `ExchangeRates` each convert their own data to and from
+lines of the data file (`toStorageLines` / `loadStorageLine`). `Storage` only splits
+the file into blocks and passes each line to the right model class, so adding data
+to one feature does not require changes in the others.
 
 ### Error handling and persistence boundaries
 
@@ -116,181 +192,492 @@ are omitted for readability; notes identify other simplifications.
 
 ### Expense management
 
+This section covers `add`, `list`, `edit` and `delete`, and `ArgumentParser`, the
+shared prefix parser that every feature parser uses.
+
 #### Implementation
 
-`ExpenseCommandParser` handles `add`, `list`, `edit` and `delete`. It constructs a
-concrete command after checking required fields, optional fields and allowed
-prefixes. `ArgumentParser` centralises common parsing; `DateUtil` and `MoneyUtil`
-avoid separate date and amount conventions across features. Expense dates cannot
-be in the future. Dates use `DD-MM-YYYY` and month filters use `MM-YYYY`.
+**Reading prefixes with `ArgumentParser`.** A feature parser passes the text after
+the command word to `new ArgumentParser(args)`. The constructor finds every known
+prefix (`d/`, `a/`, `c/`, `dt/`, `m/`, `cur/`, `sort/`, `trip/`, ...) with one regular
+expression. A prefix only counts when it is at the start or after a space, and its
+value is all the text up to the next prefix, trimmed. Text before the first prefix is
+the *preamble*, which holds an `INDEX` or a sub-command word. For example,
+`edit 3 d/Lunch at cafe a/12.50` gives the preamble `3`, `d` → `Lunch at cafe` and
+`a` → `12.50`. Because descriptions may not contain `/`, a value can never be
+mistaken for a prefix.
 
-`AppState` exposes one `ExpenseList` shared by all commands. `AddCommand` holds the
-new `Expense` and appends it during execution. `EditCommand` stores optional replacement
-fields; null means unchanged. It looks up the one-based global index and changes the
-amount first, because subtype amount validation may reject the edit. Remaining
-parser-validated fields are then applied. After execution, the affected month is
-the expense's final month. Moving an expense to another month does not require an
-overspending warning for the old month because its spending has decreased.
+The parser then asks for exactly what the command needs:
 
-`ListCommand` builds a temporary list of global indexes. Category, month and trip
-filters determine membership; a comparator optionally sorts by amount or date.
-Amount sorting uses personal SGD amounts via `getAmount()`; stable sorting preserves
-insertion order for equal keys. It does not reorder `ExpenseList`. A displayed index identifies the global entry,
-not the position in the filtered view. Deleting an entry can shift subsequent global
-indexes, so users should list again before a second index-based operation.
+- `getRequired(p)` / `getOptional(p)` return a value, and reject a prefix that is
+  empty or given twice. `getRequired` also rejects a missing prefix.
+- `checkAllowedPrefixes(...)` rejects any prefix the command does not use, so a typo
+  such as `add d/Lunch a/5 s/01-10-2026` fails instead of being silently ignored.
+- `getFlag("trip")` reads a prefix that must have no value.
+- Static helpers (`parseAmount`, `parseIndex`, `parseDescription`) and
+  `DateUtil` / `MoneyUtil` check the format of each value.
+
+The parser checks input syntax before constructing commands. State-dependent rules
+and subtype invariants are also validated in models/commands; split edits, for
+example, must combine a proposed bill/share with retained state before mutation.
+
+**Adding.** `ExpenseCommandParser.parseAdd` uses `other` when `c/` is missing and
+today's date when `dt/` is missing, and rejects a future date. Without `cur/` it
+creates an `AddCommand` that already holds the new `Expense`; `execute` appends it to
+the shared `ExpenseList`. With `cur/` it creates an `AddForeignExpenseCommand`
+instead, which looks up the rate when it executes, so a missing rate is reported
+without adding anything. Both return the expense's month from `getAffectedMonth()`,
+which makes the main loop check that month's budget.
+
+**Listing.** `ListCommand` never copies or reorders the stored list. It collects the
+positions of the matching expenses (filters from `ExpenseFilter`), sorts those
+positions if `sort/` is given, and prints each expense with its position plus one.
+The printed number is therefore always the global index that `edit` and `delete`
+accept, even in a filtered or sorted view. Java's list sort is stable, so equal
+amounts or dates stay in the order they were added.
+
+**Editing.** The parser leaves every field that is not given as `null`, meaning
+"keep the current value". The sequence diagram shows how `EditCommand` applies them.
+
+<img src="images/EditExpenseSequence.svg" alt="Edit expense sequence" width="554">
+
+For ordinary and foreign personal expenses, amount edits dispatch through
+`setAmount`, as illustrated above. Split edits instead combine the proposed bill
+and custom share, then call `SplitExpense.updateAmounts` before changing any other
+field. `my/` on a non-split is rejected before amount mutation. Both paths validate
+before changing state, so invalid edits leave the record unchanged. The shared-bill
+section below explains the split-specific path and currency units.
+After the edit, `getAffectedMonth()` returns the expense's final month. If the date
+moved the expense out of a month, that month's spending went down, so it does not
+need a new warning.
+
+**Deleting.** `DeleteCommand` removes the expense at the index and prints it.
+Later expenses move up by one index, so the user should run `list` again before
+the next `edit` or `delete`.
 
 #### Example scenario
 
-1. `add d/Lunch a/12 c/food dt/01-10-2026` creates an ordinary expense.
-2. `list sort/amount order/desc` displays entries by spending while retaining indexes.
-3. `edit 1 a/15` delegates to the existing object's `setAmount`; it does not replace
-   a split or foreign expense with an ordinary expense.
-4. The main loop checks the affected month's budget and persists the modified state.
+1. `add d/Lunch a/12 c/food dt/01-10-2026` creates an `AddCommand` holding a new
+   `Expense`. The main loop executes it, checks October's budget and saves.
+2. `split d/Dinner a/90 n/3 c/food dt/02-10-2026` adds a `SplitExpense` (share $30)
+   as expense 2.
+3. `list sort/amount` prints expense 2 before expense 1, with their original numbers.
+4. `edit 2 a/120` calls `updateAmounts` with 120 and the retained custom-share
+   setting. It treats 120 as the
+   new full bill, so the user's share becomes $40. The object is changed in place,
+   so it stays a split expense.
+5. `edit 2 a/10 dt/05-10-2026` fails if the dinner had a custom share above $10.
+   The date is not changed either, because the amount is applied first.
 
 #### Design considerations
 
-Aspect: Identifying expenses in reports.
+Aspect: How command arguments are read.
 
-- Alternative 1 (current choice): Temporary views retaining global indexes.
-  - Pros: One shared collection avoids divergent copies and filtering preserves indexes.
-  - Cons: Deleting entries shifts indexes; they are not permanent identifiers.
-- Alternative 2: Persistent expense IDs.
-  - Pros: Stable references across deletion and export.
-  - Cons: Requires new storage fields and different CLI semantics.
+- Alternative 1 (current choice): One shared `ArgumentParser` that splits the input by
+  known prefixes.
+  - Pros: Prefixes can be given in any order; repeated, empty and unexpected prefixes
+    are handled the same way in every command.
+  - Cons: A new prefix must be added to the shared pattern, which affects all parsers
+    and needs regression tests.
+- Alternative 2: Each parser splits the input by spaces and reads fixed positions.
+  - Pros: Very simple for short commands.
+  - Cons: Fixed order; descriptions with spaces need quoting; error handling would
+    differ between features.
 
-Aspect: Editing different expense types.
+Aspect: How `list` shows numbers for filtered or sorted results.
 
-- Alternative 1 (current choice): Polymorphic `Expense.setAmount`.
-  - Pros: Each subtype owns its validation.
-  - Cons: Input meanings differ: full bill for a split, original currency for a foreign expense.
-- Alternative 2: Type checks inside `EditCommand`.
-  - Pros: All edit rules are visible in one command.
-  - Cons: New subtypes require command changes and may duplicate model rules.
+- Alternative 1 (current choice): Show each expense's global index.
+  - Pros: The number can be used directly with `edit` and `delete`; the stored order
+    never changes.
+  - Cons: Numbers in a filtered list have gaps, and they change after a deletion.
+- Alternative 2: Number the shown results 1, 2, 3, ... and remember the last view.
+  - Pros: Shorter, continuous numbers.
+  - Cons: `edit` would depend on which `list` ran last, which is easy to get wrong.
 
-`ExpenseCommandsTest`, `ExpenseCommandParserTest`, `ArgumentParserTest` and
-`TravelFeaturesTest` exercise command behaviour, invalid input and subtype integration.
+Aspect: Where the rules for editing different expense types live.
 
-### Monthly budgets and warnings
+- Alternative 1 (current choice): Subtypes own validation, with an explicit atomic split-edit path.
+  - Pros: Ordinary/foreign edits use dynamic dispatch; split bill/share changes are validated together in the model.
+  - Cons: `a/` means different things for different types (SGD amount, full bill,
+    original currency), which the User Guide must explain.
+- Alternative 2: Put all subtype validation inside `EditCommand`.
+  - Pros: All edit rules are visible in one place.
+  - Cons: Every new expense type requires changing the command, and the rules would
+    be separated from the data they protect.
+
+#### Tests
+
+`ArgumentParserTest` and `ExpenseCommandParserTest` cover prefix handling and
+invalid input. `ExpenseCommandsTest` and `TravelFeaturesTest` cover the four commands,
+including split and foreign expenses. `ExpenseTest` and `ExpenseListTest` cover the
+model, the storage format and one-based indexes. `TripJioTest` runs the whole main
+loop to check saving, budget warnings and the separator line.
+
+### Monthly budgets, warnings and forecasting
 
 #### Implementation
 
-`Budget` stores an optional default monthly amount and a `TreeMap<YearMonth, Double>`
-of overrides. `getBudgetFor(month)` returns a month's override first, then the
-default, or null when neither exists. Null represents an unset budget, not zero.
-Both setters validate through `MoneyUtil`. Sorted override keys make saved data
-predictable and readable.
+The monthly budget component comprises command parsing (`BudgetCommandParser`, `ForecastCommandParser`), the domain model (`Budget`),
+command execution (`SetBudgetCommand`, `BudgetStatusCommand`, `ForecastCommand`), and automated post-execution evaluation (`BudgetChecker`).
 
-`SetBudgetCommand` changes either the default or one override and requests saving.
-It does not override `getAffectedMonth()`, so changing a budget does not automatically
-trigger the main loop's warning check. `BudgetStatusCommand` reads the applicable
-budget and sums expenses in the requested month. It displays spending and either
-remaining funds or the amount exceeded. For the current month only, it also displays
-days remaining (including today) and a nonnegative daily allowance. A constructor
-accepting an explicit reference date makes those tests reproducible.
+`BudgetCommandParser` dispatches on the subcommand action word (`set` or `status`):
+* `set`: Validates allowed prefixes (`a/` and optional `m/`). Amounts are parsed with `ArgumentParser.parseAmount`
+  and validated through `MoneyUtil.validateAmount` (must be $> 0$ and $\le \$1,000,000.00$). The optional month is
+  parsed via `DateUtil.parseMonth`.
+* `status`: Validates the optional `m/` prefix.
 
-After expense-producing commands, `TripJio` calls `BudgetChecker.check` with the
-affected month and monthly total. The checker returns text rather than printing.
-Spending strictly above the budget produces an exceeded warning. Otherwise,
-spending at or above the cent-rounded 80% threshold produces a near-budget warning.
-Exactly 100% therefore takes the threshold-warning branch, not the exceeded branch.
-No budget or spending below the threshold returns null. Warnings inform users;
-they do not reject the expense or prevent saving.
+`Budget` stores an optional default monthly amount (`Double defaultBudget`) and a `TreeMap<YearMonth, Double>`
+of monthly overrides. `getBudgetFor(month)` returns a month's override first, then the default, or `null` when neither
+exists. `null` represents an unset budget, distinct from a zero budget. In storage, the `[budget]` block writes
+`default=AMOUNT` followed by sorted `MM-YYYY=AMOUNT` lines. `TreeMap` guarantees chronological ordering in saved files,
+ensuring deterministic persistence.
+
+![Budget class diagram](images/BudgetClassDiagram.svg)
+
+`SetBudgetCommand` modifies either the default budget or a specific month's override in `Budget` and displays a
+confirmation message through `Ui`. It returns `true` from `isMutating()`, prompting `TripJio` to save the state via
+`Storage.save(state)`. It does not override `getAffectedMonth()`, so configuring a budget does not trigger an
+overspending warning.
+
+![Setting a monthly budget sequence](images/SetBudgetSequence.svg)
+
+`BudgetStatusCommand` reads the effective budget for the requested month via `Budget.getBudgetFor(month)` and sums
+the month's expenses using `ExpenseList.getTotalSpentInMonth(month)`. It reports the total budget, amount spent, and
+either remaining funds or the amount exceeded. For the ongoing month (where `month.equals(YearMonth.from(today))`),
+it additionally computes:
+* `daysLeft = month.lengthOfMonth() - today.getDayOfMonth() + 1` (including today)
+* `dailyAllowance = (remaining > 0) ? MoneyUtil.roundToCents(remaining / daysLeft) : 0.0`
+
+A secondary constructor `BudgetStatusCommand(YearMonth month, LocalDate today)` injects an explicit reference date,
+making date-boundary and leap-year tests deterministic.
+
+![Viewing budget status sequence](images/BudgetStatusSequence.svg)
+
+`ForecastCommandParser` processes the `forecast` command word and validates the optional `m/` prefix.
+`ForecastCommand` projects end-of-month spending based on elapsed daily spending rates:
+* **Past months**: The month has already concluded, so actual historical spending is reported without projection.
+* **Future months**: The month has not started yet, so no expenses have occurred.
+* **Current month**: Extrapolates spending using linear progression:
+  * `daysPassed = today.getDayOfMonth()`
+  * `daysInMonth = month.lengthOfMonth()`
+  * `projected = MoneyUtil.roundToCents((spent / daysPassed) * daysInMonth)`
+  * Compares `projected` against `Budget.getBudgetFor(month)`. If projected spending exceeds the budget, it warns of estimated overspending (`Projected to exceed budget by $...`). Otherwise, it reports safe pacing. When no budget exists, it reports projected monthly spending.
+
+Like `BudgetStatusCommand`, `ForecastCommand` provides a secondary constructor `(YearMonth, LocalDate)` allowing deterministic unit tests across date boundaries and leap years.
+
+![Forecasting monthly spending sequence](images/ForecastSequence.svg)
+
+After every mutating expense command (`add`, `edit`, `split`), the `TripJio` main loop retrieves `command.getAffectedMonth()`
+and queries `ExpenseList.getTotalSpentInMonth(month)`. It then invokes `BudgetChecker.check(budget, spent, month)`:
+* If spending strictly exceeds the budget, an **exceeded warning** is produced (`Warning: You have exceeded your budget...`).
+* Otherwise, if spending meets or exceeds the cent-rounded 80% threshold (`MoneyUtil.roundToCents(budget * 0.8)`), an
+  **80% warning** is produced (`Warning: You have used 80% or more of your budget...`).
+* Exactly 100% spending takes the 80% threshold branch with `$0.00 remaining`, not the exceeded branch.
+* Spending below 80% or months without a configured budget return `null` (no warning displayed).
+
+`BudgetChecker` returns a formatted `String` rather than printing directly, maintaining clean separation between the
+model layer and the user interface.
 
 ![Monthly budget warning sequence](images/BudgetWarningSequence.svg)
 
 #### Example scenario
 
-1. Set `budget set a/1000` and `budget set a/100 m/10-2026`.
-2. Add an October expense of $80. October's override is used and the 80% warning appears.
-3. Add another October expense of $21. Spending is $101, so the exceeded warning appears.
-4. Run `budget status m/10-2026` to inspect the result. Other months still use $1000.
+1. The user enters `budget set a/1000`. `SetBudgetCommand` sets `defaultBudget = 1000.0`.
+2. The user enters `budget set a/500 m/12-2026`. `SetBudgetCommand` adds an entry for `2026-12` in `monthlyBudgets`.
+3. The user adds an expense on `15-12-2026` of $420. `TripJio` queries `getAffectedMonth()` (`2026-12`), fetches
+   the December budget ($500), and calls `BudgetChecker.check`. Since $420 $\ge$ $400 (80%), an 80% warning is shown.
+4. The user enters `budget status m/12-2026`. `BudgetStatusCommand` shows $500 budget, $420 spent, and $80 remaining.
+5. Inquiries for any other month (e.g. `budget status m/11-2026`) fall back to the default $1,000 budget.
+6. On day 15 of December with $420 spent, the user enters `forecast m/12-2026`. `ForecastCommand` calculates daily pace ($420 / 15 = $28.00/day) and projects $868.00 total spending, warning of projected overspending by $368.00 against the $500 budget.
 
 #### Design considerations
 
 Aspect: Configuring monthly budgets.
 
 - Alternative 1 (current choice): Default with monthly overrides.
-  - Pros: Avoids repeated setup while accommodating unusual months.
-  - Cons: Does not represent trip or category allocations.
-- Alternative 2: Explicit budgets for every month.
-  - Pros: Each configured month has its own amount.
-  - Cons: Repetitive setup can leave months unconfigured.
+  - Pros: Avoids repetitive monthly setup while allowing flexibility for unusual or travel months.
+  - Cons: Requires an explicit fallback check (`monthly override ?? defaultBudget ?? null`).
+- Alternative 2: Explicit budgets for every individual month.
+  - Pros: Simpler data structure (only a map without default fallback).
+  - Cons: Burdens users with configuring every month from scratch; unconfigured months have no budget.
 
-Aspect: Triggering warnings.
+Aspect: Triggering budget warnings.
 
-- Alternative 1 (current choice): Central post-execution checks.
-  - Pros: Add/edit/split share one policy.
-  - Cons: Commands must return the correct affected month or checks are skipped.
-- Alternative 2: Each command generates its own warning.
-  - Pros: Command-specific behaviour is straightforward.
-  - Cons: Duplicates thresholds and couples commands to budget policy.
+- Alternative 1 (current choice): Centralized post-execution hook in `TripJio`.
+  - Pros: Decouples commands from budget policy; `add`, `edit`, and `split` reuse one unified warning mechanism.
+  - Cons: Requires commands that affect spending to implement `getAffectedMonth()`.
+- Alternative 2: Each command evaluates and prints its own warnings during `execute`.
+  - Pros: Warnings occur directly inside the command logic.
+  - Cons: Duplicates threshold logic across commands and tightly couples command execution to `BudgetChecker`.
 
-`BudgetTest`, `BudgetCheckerTest`, `SetBudgetCommandTest` and `BudgetStatusCommandTest`
-cover overrides, thresholds, missing budgets and date-dependent allowance calculations.
-Trip-specific budgets and forecasting remain planned extensions.
+Aspect: Daily allowance scope in `budget status`.
 
-### Shared-bill expenses
+- Alternative 1 (current choice): Compute daily allowance only when viewing the current ongoing month.
+  - Pros: Daily pace is only actionable for the current active period; past months are closed and future months have not started.
+  - Cons: Users querying other months do not see pacing figures.
+- Alternative 2: Display daily allowance for any queried month.
+  - Pros: Output fields remain identical regardless of the target month.
+  - Cons: Displaying a "daily allowance" for a completed historical month is confusing and mathematically artificial.
+
+Aspect: Extrapolating spending in `forecast`.
+
+- Alternative 1 (current choice): Uniform daily pacing `(spent / daysPassed) * totalDays`.
+  - Pros: Transparent, predictable, and requires no opaque statistical assumptions.
+  - Cons: Does not distinguish between uniform day-to-day spending and lump-sum one-off payments.
+- Alternative 2: Weighted trend based on recent days or multi-month moving average.
+  - Pros: Adapts to non-linear spending changes.
+  - Cons: Requires extensive historical data which exchange students lack, and adds complexity without significant accuracy gains for short periods.
+
+`BudgetTest`, `BudgetCheckerTest`, `SetBudgetCommandTest`, `BudgetStatusCommandTest` and `ForecastCommandTest`
+cover overrides, thresholds, missing budgets, parsing, and date-dependent allowance and projection calculations.
+
+### Trip budgets, warnings and summary
 
 #### Implementation
 
-`SplitCommandParser` accepts a description, full SGD bill and participant count,
-plus an optional personal share. The count must be between 2 and 50. A custom
-share must be positive and no greater than the bill. With no custom share, the
-equal share is rounded to cents and must be at least $0.01. Category defaults to
-`OTHER` and date defaults to today. Unsupported prefixes, including named people
-and foreign currency, are rejected by the current parser.
+The trip budgeting subsystem extends `Trip` with planned spending targets, introduces automated trip overspending checks after mutating expense operations, and provides a formatted category breakdown report.
 
-`SplitCommand.execute` constructs a `SplitExpense`, appends it to the shared
-`ExpenseList` and prints the result. `SplitExpense` extends `Expense`: the inherited
-amount stores the user's share, while the subtype stores the full bill, participant
-count and whether the share was custom. `getAmount()` is inherited, not overridden.
-Consequently budgets, trip totals and statistics count only the user's share without
-knowing that the item is a split bill.
+`Trip` stores an optional `Double budget` alongside its start and end dates. `getBudget()` returns `null` when unset. In storage, `TripBook.toStorageLines()` writes trips as `T|name|start|end|budget`. The budget token is optional: legacy 4-token records load safely with `budget = null`, preserving backward compatibility with v1.0 and earlier data files.
 
-![Split creation and shared expense storage sequence](images/SplitSequence.svg)
+`TripCommandParser` dispatches the `budget` and `summary` subcommands:
+* `trip budget a/AMOUNT`: Validates the `a/` prefix using `ArgumentParser.checkAllowedPrefixes("a")` and `MoneyUtil.validateAmount`. `TripBudgetCommand` requires an active trip selection (`tripBook.hasCurrent()`), updates `trip.setBudget(amount)`, and returns `true` from `isMutating()` to trigger storage persistence.
+* `trip summary`: `TripSummaryCommand` verifies an active trip selection, filters expenses within the trip's date range via `ExpenseList.getExpensesBetween(trip.getStartDate(), trip.getEndDate())`, and aggregates spending totals across categories.
 
-`SplitExpense.setAmount` interprets its argument as a replacement full bill. For
-an equal split it recalculates the share; for a custom split it preserves the share
-and rejects a bill smaller than it. Validation precedes mutation. `split list`
-restricts results to split instances, optionally intersecting month/trip filters,
-while retaining global expense indexes.
+![Generating trip summary breakdown](images/TripSummarySequence.svg)
+
+`TripSummaryCommand` produces a structured 3-column ASCII breakdown table (`Category`, `Spent`, `% of Total`) styled consistently with the application's comparison tables. It displays:
+* Trip dates and inclusive duration.
+* Total planned budget vs. total actual spent in SGD.
+* Remaining days and daily allowance (`remaining / remainingDays`), guarded against completed trips or overbudget states. If the budget is exceeded, it displays the excess amount.
+
+To detect trip overspending automatically, `Command.getAffectedDate()` provides a hook returning the expense date of a mutating transaction (implemented in `AddCommand`, `AddForeignExpenseCommand`, `SplitCommand`, and `EditCommand`). After command execution, `TripJio` calls `BudgetChecker.checkTrip(trip, spent)`:
+* Evaluates spending only if an active trip is selected (`tripBook.hasCurrent()`), has a configured budget (`trip.getBudget() != null`), and the affected date falls within the trip (`trip.contains(affectedDate)`).
+* Produces an **exceeded warning** if spending strictly exceeds the trip budget.
+* Produces an **80% warning** if spending meets or exceeds the cent-rounded threshold (`MoneyUtil.roundToCents(tripBudget * 0.8)`).
+* Returns `null` if spending is below 80% or if the transaction does not affect the selected trip.
 
 #### Example scenario
 
-1. `split d/Dinner a/90 n/3 c/food dt/01-10-2026` records a $30 personal expense.
-2. `edit 1 a/120` changes an equal split's personal amount to $40.
-3. `split d/Taxi a/50 n/3 my/10 dt/01-10-2026` records only $10 for the user.
-4. Editing that taxi bill below $10 fails; raising its bill preserves the $10 share.
-
-An `S|` record stores description, full bill, people, personal share, category and
-date. The loader validates each record and infers whether the share is custom by
-comparing it with the rounded equal share. It does not store the custom/equal flag.
-Thus a deliberately custom share equal to the equal share reloads as an equal split.
-This is a current format limitation, not a guarantee of preserving user intent.
+1. The user selects a Japan trip: `trip 1`.
+2. The user sets a trip budget: `trip budget a/2000`. `TripBudgetCommand` assigns the budget and saves the state.
+3. The user records a flight expense of $1,650 dated during the trip. `TripJio` invokes `command.getAffectedDate()`, verifies it falls in Japan, and queries `BudgetChecker.checkTrip`. Because $1,650 $\ge$ $1,600 (80%), an 80% warning is shown.
+4. Adding another expense of $400 brings total trip spending to $2,050. The next operation triggers the exceeded warning (`Exceeded trip budget by $50.00`).
+5. The user runs `trip summary`. `TripSummaryCommand` prints the ASCII category table, reports $2,000 budget vs $2,050 spent, and notes that the budget is exceeded.
 
 #### Design considerations
 
-Aspect: Representing shared bills.
+Aspect: Storage format for trip budgets.
 
-- Alternative 1 (current choice): A split is an expense subtype.
-  - Pros: Existing reports automatically use the personal cost.
-  - Cons: Full bill and personal share require clearly distinguished meanings.
-- Alternative 2: Store split bills separately.
-  - Pros: Isolates group-specific operations.
-  - Cons: Reports must merge collections and avoid double counting.
+- Alternative 1 (current choice): Optional 5th field on existing `T|` trip records.
+  - Pros: Encapsulates all trip attributes in a single record; cleanly backward-compatible with 4-column lines.
+  - Cons: Broadens the line schema for trips.
+- Alternative 2: Dedicated `[trip_budgets]` section in the data file.
+  - Pros: Keeps the `T|` record strictly confined to name and dates.
+  - Cons: Requires cross-referencing trip names or indexes across separate storage sections.
 
-Aspect: Scope of repayment tracking.
+Aspect: Scope of trip overspending warnings.
 
-- Alternative 1 (current choice): Personal spending only.
-  - Pros: No debt ledger to reconcile.
-  - Cons: No named debtors or allocation of leftover cents among participants.
-- Alternative 2 (planned): Separate named debts and settlements.
-  - Pros: Tracks repayments without counting them again as expenses.
-  - Cons: Requires a rounding-allocation rule, new storage and consistency tests.
+- Alternative 1 (current choice): Check only the currently selected trip.
+  - Pros: Aligns with TripJio's selected-trip focus; avoids multiple warnings for single expenses when date ranges overlap.
+  - Cons: Expenses belonging to an unselected trip containing the date do not trigger warnings.
+- Alternative 2: Iterate and warn for every configured trip that contains the expense date.
+  - Pros: Warns regardless of which trip is currently selected.
+  - Cons: Generates noisy duplicate warnings and complicates user mental models when overlapping trips exist.
 
-`SplitCommandParserTest` and `SplitExpenseTest` cover input rules and split calculations;
-storage and reporting tests cover reuse of the same expenses. Direct construction
-relies on validated inputs, so new entry points must not bypass boundary checks.
+`TripBudgetCommandTest`, `TripSummaryCommandTest`, `BudgetCheckerTest` and `TripJioTest`
+verify validation, ASCII table formatting, warning thresholds and persistence boundaries.
+
+### Shared-bill expenses
+
+#### Implementation and model contract
+
+**Feature owner: John Alday.** Split creation, personal-share edits, debt queries
+and settlements operate on the same AppState used by budgets and trip reports.
+`SplitCommandParser` validates required description/amount/people, optional
+category/date/share, participant names and currency arguments. Category defaults
+to OTHER, date to today; future expense dates and unsupported prefixes are rejected.
+
+`SplitCommand.execute` constructs a SplitExpense and appends it to ExpenseList.
+It returns true from `isMutating()` and `YearMonth.from(date)` from
+`getAffectedMonth()`: the main loop checks that month's budget after a successful
+split and saves. Failed commands do neither. Only the user's SGD share counts
+towards spending; a full group bill is never added again as a separate expense.
+
+![Split creation and shared expense storage sequence](images/SplitSequence.svg)
+
+SplitExpense extends Expense. Its inherited amount holds the full SGD bill;
+`getTotalAmount()` reads that value via the superclass, while overridden
+`getAmount()` returns `getMyShare()`. A null customShare selects an equal share
+rounded to cents; a non-null customShare stays fixed until explicitly edited.
+Consumers sum polymorphic getAmount(), so budgets, sorting and trip/category
+reports do not inspect private split fields.
+
+![Split model, expense polymorphism and signed settlements](images/SplitLedgerModel.svg)
+
+The diagram omits unrelated state and routine getters. Settlement is stored
+separately from expenses: a repayment changes the ledger, not personal spending.
+Public construction relies on parser/storage boundary validation; constructor
+assertions are not a substitute for validating external input.
+
+#### Named splits and exact cent allocation
+
+`Parser` routes `owe` and `settle` to `ExpenseCommandParser`; creation remains in
+`SplitCommandParser`. `ArgumentParser` recognises `p/`, `paid/` and `rate/`, and each
+feature parser explicitly permits its own prefixes. Missing, empty or repeated
+required/optional values are rejected before constructing commands.
+
+`p/Alice,Bob` contains the other `n - 1` people, excluding the user. Names are
+trimmed and lowercased with `Locale.ROOT`, must be unique ignoring case, and cannot
+contain comma, slash, pipe or line breaks. A supplied `paid/NAME` must occur in
+that participant list. Unnamed splits continue to record spending but assign no
+individual debts.
+
+Without `paid/`, the user paid the bill and each named person owes their allocated
+part. With `paid/Alice`, only the user's own share owed to Alice is tracked; the
+application does not model debts between other people. `getAmountsOwedToMe()`
+returns an insertion-ordered map so leftover cents follow the participant order.
+The essential allocation, expressed as pseudocode, is:
+
+```text
+remainingCents = round((fullSgdBill - mySgdShare) * 100)
+baseCents = remainingCents / numberOfOtherPeople       (integer division)
+extraCents = remainingCents % numberOfOtherPeople
+person[i] receives baseCents + 1 when i < extraCents, otherwise baseCents
+```
+
+For `split d/Dinner a/100 n/3 p/Alice,Bob`, own share is $33.33, Alice owes $33.34,
+and Bob owes $33.33. The three shares sum to $100.00. Allocation order is distinct
+from ledger display order: `owe` uses a `TreeSet` to show names alphabetically.
+`MoneyUtil.format` provides fixed-locale cents and thousands separators in both
+debt directions, e.g. `$1,234.50`.
+
+#### Debt calculation and settlement execution
+
+`OweCommand` and `SettleCommand.calculateNetBalance` derive the person's balance
+from current splits and prior payments rather than maintain a mutable debt cache:
+
+```text
+net(person) = incoming split shares - outgoing own shares - signed settlements
+```
+
+A positive net means the person owes the user; a negative net means the user owes
+them. Positive stored settlement amounts represent money received by the user;
+negative amounts represent money paid. Half-cent tolerances are used when testing
+whether a balance is effectively settled. The optional `owe p/NAME` filters net
+output; it does not currently list individual contributing splits.
+
+For a successful `settle p/Alice a/10`, the command recomputes the balance before
+recording the payment. Without `a/`, it uses the full absolute balance. A supplied
+payment must be positive, finite, cent-precision and within the outstanding
+balance; a zero balance or excessive payment throws `TripJioException` before an
+append. The sign comes from the balance, not from user-supplied signed input.
+
+![successful settlement and automatic saving](images/SettlementSequence.svg)
+
+The sequence shows a successful partial payment. UI printing and AppState getters
+are omitted. The calculation self-call scans applicable split shares and signed
+payments as described above. On rejected input, execution stops before the new
+Settlement is created and the main loop does not save that command.
+
+Settlement does not change expenses, budgets or category/trip totals. Editing or
+deleting a historical split recalculates its debt contribution while retaining
+old payments, so the net can reverse direction. There is no payment-edit or undo
+command. This is a boundary that maintainers must preserve and explain.
+
+#### Atomic custom-share edits and currency units
+
+`EditCommand` rejects `my/` on an ordinary/foreign personal expense before changing
+its amount. For a split, it combines the supplied bill/share with retained values
+and calls `updateAmounts`. That method validates the final pair before assigning
+either field. An excerpt from the implementation's model shows the mutation boundary:
+
+```java
+validateShare(total, numberOfPeople, share);
+MoneyUtil.validateOriginalAmount(total);
+amount = total;
+customShare = share;
+```
+
+`edit 1 a/30 my/10` can therefore replace an old $90 bill with a $40 custom share:
+the new pair is valid even though the old share exceeded the new bill. Conversely,
+`edit 1 a/30 d/Changed` fails with the old custom share and leaves all fields
+unchanged. Equal splits recompute their share; a custom share stays fixed unless
+explicitly edited. The user's share must be at least $0.01 and no more than the
+full bill; the participant count remains 2 through 50.
+
+Foreign split creation requires both `cur/CURRENCY` and an explicit `rate/RATE`,
+measured in SGD per original unit. It does not look up the configured personal-
+expense rate table. Rate and currency validation reuse `ExchangeRates` helpers;
+conversion uses `ExchangeRates.toSgd(double, double)` and cent rounding. Validation
+checks the converted SGD bill cap, not an arbitrary cap on the original number.
+
+| Input/operation in the split implementation | Unit and behaviour |
+| --- | --- |
+| Creation `a/100 cur/EUR rate/1.45` | Original bill EUR 100 becomes SGD 145 |
+| Creation/edit `my/45` | Own share SGD 45, not EUR 45 |
+| Split `edit INDEX a/150` | Replacement full bill SGD 150, retaining saved metadata |
+| Personal `ForeignExpense` amount edit | Original currency, using its saved BigDecimal rate |
+| Split storage/load | Bill/share already SGD; never reconvert |
+
+These are the current semantics, which differ from the early v2 planning notes.
+`ForeignExpense` uses BigDecimal half-up conversion; the split helper uses doubles
+and Math.round. Unifying those conversions and foreign-edit conventions is a
+future design decision, not an implemented currency-value abstraction.
+
+#### Split persistence and migration
+
+The format keeps the first seven fields in their legacy order and appends payer,
+comma-separated participants, currency, rate and a custom-share boolean:
+
+```text
+S|description|sgdBill|people|sgdShare|category|date|payer|participants|currency|rate|hasCustomShare
+S|Dinner|100.00|3|33.33|FOOD|01-10-2026||alice,bob|||false
+```
+
+The loader accepts exactly seven or twelve fields. Old lines infer custom status
+as before; new lines preserve an explicit custom share even when numerically equal
+to the equal share. Empty trailing fields are retained during splitting. Currency
+rates are written in plain decimal notation. Signed `[owe]` amounts use
+`MoneyUtil.toStorageString` so payment records consistently contain two decimals.
+
+![restoration without a second currency conversion](images/SplitLoadSequence.svg)
+
+The static loader validates persisted descriptions inside the model, without an
+ArgumentParser import, then restores the already-converted bill. The private
+constructor's `alreadyConverted` path prevents the saved rate being applied again.
+The surrounding Storage loader skips invalid supported records with a warning;
+valid records continue loading. Older versions cannot load the extended format, so keep a backup before downgrading.
+
+#### Design considerations and verification
+
+Aspect: Computing debt after expense edits.
+
+- Alternative 1 (current choice): Recompute from splits and signed payments on each query.
+  - Pros: No cached balances to synchronize after bill/share edits.
+  - Cons: Linear scans, and aggregation is currently duplicated by owe and settle.
+- Alternative 2: Store a separate mutable balance per person.
+  - Pros: Faster queries over a large history.
+  - Cons: Every edit/delete must correctly reverse prior effects; stale balances are harder to diagnose.
+
+Aspect: Preserving split intent and currency history.
+
+- Alternative 1 (current choice): Extend the S record, persist the flag and store converted SGD totals.
+  - Pros: Old records load and saved foreign splits are not converted twice.
+  - Cons: The flag cannot recover intent missing from old records; split metadata does not retain a separately editable original bill.
+- Alternative 2: New versioned currency-value records for all expenses.
+  - Pros: Could unify rounding and edit units across personal and split expenses.
+  - Cons: Requires a broader migration and team-wide agreement on semantics.
+
+The implementation's `ReviewFeedbackTest` covers cent allocation, legacy/extended round-trips,
+foreign metadata, both settlement directions, partial/full payments and rejected
+combined edits. `OweCommandTest` checks alphabetical order, large amounts and a
+German default locale. `SplitExpenseTest` checks legacy/extended description
+validation; `TripJioTest` exercises actual save/restart/settle input loops. These
+tests exercise the shared application workflow rather than a separate ledger-only state.
+
+`SplitCommandTest` protects the affected-month contract. Full-loop tests in
+`TripJioTest` verify threshold/exceeded warnings from ordinary and converted
+splits, and confirm that a small custom share does not warn based on the full bill.
 
 ### Trip management and selected-trip reporting
 
@@ -577,8 +964,119 @@ Aspect: When to resolve the rate.
   - Cons: Historical budgets would change without expense edits; live lookup also
     introduces availability and reproducibility problems.
 
-The base reporting currency remains SGD. Foreign-currency splits are planned, not
-implemented. `TravelFeaturesTest` covers conversion, rate changes and persistence.
+The base reporting currency remains SGD. Shared bills use their own explicit
+`cur/` plus `rate/` input as described in Shared-bill expenses; personal foreign
+expenses continue to use configured manual rates. `TravelFeaturesTest` covers conversion, rate changes and persistence.
+
+### [Proposed] Export to CSV
+
+This feature is planned for v2.0 and is not implemented yet. It lets users open
+their spending in a spreadsheet (e.g. Excel, Numbers or Google Sheets) to make their
+own charts or share a trip's costs with friends.
+
+#### Proposed behaviour
+
+`export [c/CATEGORY] [m/MONTH] [trip/]` writes the matching expenses to
+`data/export.csv`, replacing any earlier export, and prints a message such as
+`Exported 3 expenses to data/export.csv.` The filters mean exactly the same as in
+`list`. If no expense matches, TripJio prints `No expenses match the given filter.`
+and writes no file. The command never changes expenses, so it is not a mutating
+command and the data file is not saved again.
+
+Each row is one expense, after a header row:
+
+```
+Index,Date,Description,Category,Amount (SGD),Type,Full bill (SGD),People,Original amount,Currency,Rate
+1,2026-10-15,Lunch,Food,12.50,Personal,,,,,
+3,2026-10-14,Group dinner,Food,30.00,Split,90.00,3,,,
+4,2026-10-10,"Ramen, large",Food,17.40,Foreign,,,12.00,EUR,1.45
+```
+
+`Amount (SGD)` is always the user's own spending (`getAmount()`), so the column
+total in a spreadsheet matches TripJio's own totals. Columns that do not apply to
+an expense type are left empty. `Index` is the expense's global index, as in `list`.
+
+#### Proposed implementation
+
+<img src="images/ExportClassDiagram.svg" alt="Classes involved in export" width="671">
+
+The feature reuses existing parts of the architecture wherever possible:
+
+- **Parsing.** `ExportCommandParser` accepts the same `c/`, `m/` and `trip/`
+  arguments as `list` (no sorting), using `ArgumentParser.checkAllowedPrefixes`
+  and `getFlag("trip")`. `Parser` gets one new `case "export"` line.
+- **Filtering.** `ExportCommand` calls `ExpenseFilter.select(state, category, month,
+  tripOnly)`, the same shared helper used by `list`, `split list` and `stats trip/`.
+  The export therefore always contains exactly the expenses that `list` shows with
+  the same filters, and a missing trip selection produces the same error.
+- **Rows.** `Expense` gets a new method `toCsvFields(index)` that returns the values
+  of one row. `SplitExpense` and `ForeignExpense` override it to fill their own
+  columns, in the same way they already override `toStorageString()`. `CsvExporter`
+  never checks the type of an expense, so a new expense type only needs its own
+  override.
+- **Escaping and writing.** `CsvExporter` is a small helper in the `storage` package.
+  `escape(field)` follows the common CSV rule (RFC 4180): a field containing a comma,
+  a double quote or a line break is wrapped in double quotes, and each double quote
+  inside it is doubled. Descriptions may contain commas and quotes (only `/` and `|`
+  are forbidden), so this is required. The rule, in pseudocode:
+
+  ```
+  escape(field):
+      if field contains ',' or '"' or a line break:
+          return '"' + (field with every '"' replaced by '""') + '"'
+      return field
+  ```
+
+  For example, `Ramen, "large"` becomes `"Ramen, ""large"""`.
+  `write(path, lines)` creates the `data` folder
+  if needed and writes UTF-8 with a byte-order mark (BOM). An `IOException` is turned
+  into a `TripJioException`, so the main loop shows an error and continues.
+
+Amounts are written with `MoneyUtil.toStorageString` (e.g. `1234.50`: no dollar sign
+and no thousands separator), so spreadsheets read them as numbers.
+
+The sequence diagram below shows `export m/10-2026 trip/`. Escaping happens inside
+`toCsvLines` and is left out of the diagram.
+
+<img src="images/ExportSequence.svg" alt="Export execution sequence" width="802">
+
+#### Design considerations
+
+Aspect: How each row is built for different expense types.
+
+- Alternative 1 (proposed): Each expense class builds its own row with `toCsvFields`.
+  - Pros: Follows the existing `toStorageString` design; no `instanceof` checks;
+    a new expense type cannot be forgotten by the exporter.
+  - Cons: The model knows about one more output format.
+- Alternative 2: `CsvExporter` checks the type of each expense.
+  - Pros: All CSV code is in one class.
+  - Cons: Needs `instanceof` checks and must be updated for every new type.
+
+Aspect: Date format in the file.
+
+- Alternative 1 (proposed): ISO format `YYYY-MM-DD`.
+  - Pros: Spreadsheets recognise it as a date in every region and sort it correctly.
+  - Cons: Differs from the `DD-MM-YYYY` format used in commands.
+- Alternative 2: `DD-MM-YYYY`, as in the rest of TripJio.
+  - Pros: Consistent with the app.
+  - Cons: Some spreadsheets read `01-10-2026` as 10 January, depending on the region.
+
+Aspect: Text encoding.
+
+- Alternative 1 (proposed): UTF-8 with a byte-order mark.
+  - Pros: Excel then shows descriptions such as `Phở` or `Café` correctly.
+  - Cons: A few simple text tools show the mark as an extra character.
+- Alternative 2: UTF-8 without a byte-order mark, like `data/tripjio.txt`.
+  - Pros: Identical to the data file.
+  - Cons: Excel may show non-English characters incorrectly.
+
+#### Planned tests
+
+- `CsvExporterTest`: escaping of commas, double quotes and line breaks; header row;
+  empty columns for each expense type.
+- `ExportCommandTest`: uses a JUnit `@TempDir`; checks that the rows match `list` with
+  the same filters, that no file is written when nothing matches, and that the data
+  in `AppState` does not change.
 
 ## Maintaining the diagrams
 
@@ -588,35 +1086,55 @@ from the repository root (the output path is relative to the diagram source fold
 The class diagram uses PlantUML's bundled Smetana layout engine, so Graphviz is not required.
 Update both source and image when the implementation changes.
 
-
 ## Product scope
 
 ### Target user profile
 
-Students on exchange who prefer keyboard-driven expense entry, need to track their
-own share of group spending and travel costs, and can maintain data on one computer.
+University students who travel, for example on weekend getaways, recess-week
+trips, graduation trips or a semester abroad. They:
+
+- have a limited budget and want to control their spending,
+- often share expenses with friends (meals, taxis, accommodation),
+- prefer typing over mouse interactions and are comfortable with CLI apps,
+- prefer a desktop app that keeps their data locally.
 
 ### Value proposition
 
-TripJio combines personal expenses, monthly budgets, manual currency conversion and
-date-based trip reports in one offline CLI. It is not a booking platform, housing
-search service, bank integration or cloud-synchronised financial account.
+Track travel and daily spending faster than a typical mouse- or app-driven budget
+tracker, see your real share of group expenses, record purchases in other currencies,
+and stay within a monthly budget, all offline and for free. TripJio is not a booking
+platform, bank integration or cloud-synchronised financial account.
 
-## User Stories
+## User stories
 
-| Status | As a ... | I want to ... | So that I can ... |
+Priorities: High (must have) `* * *`, Medium (nice to have) `* *`, Low (unlikely to have) `*`.
+Stories marked *planned* are not implemented yet.
+
+| Priority | As a ... | I want to ... | So that I can ... |
 | --- | --- | --- | --- |
-| Implemented | new user | view command help | learn the accepted input formats |
-| Implemented | exchange student | record and correct expenses | keep accurate spending records |
-| Implemented | traveller | record foreign purchases using a saved rate | compare costs in SGD |
-| Implemented | group traveller | record my share of a bill | avoid counting the entire group bill |
-| Implemented | budget-conscious student | receive monthly budget warnings | recognise overspending |
-| Implemented | traveller | manage trips and filter by their dates | review trip-specific costs |
-| Implemented | student | compare two months by category | understand spending changes |
-| Planned | group traveller | track named debts and repayments | know who still owes money |
-| Planned | student | export filtered spending | analyse it outside the app |
+| `* * *` | new user | view command help | learn the accepted input formats |
+| `* * *` | traveller | add an expense | track what I purchased |
+| `* * *` | traveller | edit an expense | fix details if I entered them wrongly |
+| `* * *` | traveller | delete an expense | remove expenses I no longer need |
+| `* * *` | traveller | view all expenses | remember what I purchased previously |
+| `* * *` | traveller | categorise my expenses | identify where most of my money goes |
+| `* * *` | traveller going out as a group | record a shared bill and only my share of it | know how much I actually spent |
+| `* * *` | traveller | set a monthly budget | control how much I plan to spend |
+| `* * *` | traveller managing my budget | be warned when I am close to or over my budget | avoid overspending |
+| `* * *` | traveller | specify my trip start and end dates | evaluate my spending against the time remaining |
+| `* *` | traveller | filter expenses by category, month and trip | find specific expenses quickly |
+| `* *` | traveller | sort expenses by amount or date | see my biggest or latest purchases first |
+| `* *` | traveller abroad | record a purchase in a foreign currency with a rate I choose | see its cost in SGD without internet access |
+| `* *` | traveller planning several trips | keep, edit and delete named trips | review the spending of each trip separately |
+| `* *` | traveller | view spending statistics by category | check how much I spend each month or trip |
+| `* *` | traveller | compare my spending across two months | understand changes in my spending habits |
+| `* *` | group traveller | name the participants and bill payer | identify who owes whom |
+| `* *` | group traveller | record full or partial repayments | see the remaining net balance |
+| `* *` | group traveller | safely edit my own share | correct my spending without partially changing the bill |
+| `* *` | traveller | split a foreign bill using an explicit rate | count my share and debts in SGD |
+| `*` | student | export my spending (*planned*) | analyse it outside the app |
 
-## Non-Functional Requirements
+## Non-functional requirements
 
 The following are design targets and maintenance constraints, not measured benchmarks:
 
@@ -639,10 +1157,14 @@ The following are design targets and maintenance constraints, not measured bench
 - **Global index:** One-based position in the complete expense or trip list.
 - **Selected trip:** The explicitly active trip; selection may be absent.
 - **Personal share:** The portion of a split bill counted as the user's expense.
+- **Full bill:** The entire group purchase, distinct from personal spending.
+- **Signed settlement:** Positive money received or negative money paid by the user.
+- **Net balance:** Incoming split shares minus outgoing own shares minus signed payments.
 - **Rate snapshot:** Conversion rate stored with a foreign expense at creation time.
 - **Mutating command:** A command whose successful execution requests saving.
 - **Affected month:** Month returned by a command for the post-execution budget check.
 - **Legacy storage:** Older `[trip]` data accepted for backward compatibility.
+- **Separator line:** The line of dashes printed after every command's response.
 
 ## Instructions for manual testing
 
@@ -700,3 +1222,43 @@ its own setup; start with a fresh isolated directory when indexes would otherwis
 3. Reverse the months and confirm change signs reverse; an empty month yields zeros.
 4. Run `list sort/amount order/desc`; verify descending personal SGD amounts and
    original global indexes. Reports must not change the stored collection.
+
+
+### Shared-bill integration and persistence
+
+Use a new isolated folder for each independent scenario; expense dates must be in the past.
+
+1. Set `budget set a/100 m/10-2026`, then create
+   `split d/Dinner a/270 n/3 dt/20-10-2026`. Expect a warning with $90 spent,
+   not $270. Add an $11 own share to cross the budget and check the exceeded warning.
+2. In an empty instance add `split d/Dinner a/100 n/3 p/Alice,Bob dt/01-10-2026`.
+   Own share is $33.33; Alice owes $33.34 and Bob $33.33. Record a $10 repayment
+   from Alice, restart, then check Alice's $23.34 balance and unchanged spending.
+3. Create a custom split with bill $90 and share $40. `edit 1 a/30 d/Changed`
+   fails unchanged; `edit 1 a/30 my/10` succeeds. Do this in its own empty folder.
+4. Save/reload a deliberately custom $30 share on a $90 three-person bill, then
+   change its bill to $120. Own share stays $30, proving the custom flag survived.
+5. In a new folder create `split d/Hotel a/100 n/3 p/Alice,Bob paid/Alice cur/EUR rate/1.45 my/45 dt/01-10-2026`.
+   Restart: full bill remains SGD 145 and own share/debt SGD 45. Verify the saved
+   rate was not applied again. `edit 1 a/150` changes the full SGD bill only.
+6. In a disposable file, load a legacy seven-field S record then save/restart.
+   It remains a SplitExpense. A malformed extended record warns without preventing
+   another valid record from loading. New twelve-field records preserve all metadata.
+7. Fully settle a named bill, then delete its split. The payment remains and net
+   debt may reverse; this behaviour must agree with the UG. Do not expect settlement
+   to change budget totals, and do not expect bill deletion to delete payments.
+
+### Forecasting
+
+1. Run `budget set a/300 m/10-2026` and add $100 on a past date in that month.
+2. In the ongoing month, run `forecast`: it computes daily pacing and displays projected end-of-month spending and budget comparison.
+3. Query a concluded historical month: `forecast m/09-2026`; it reports actual past spending without extrapolation.
+4. Query a future month: `forecast m/12-2026`; it reports that the month has not started yet.
+
+### Trip budget and summary
+
+1. In a fresh instance, add a trip: `trip add n/Exchange s/01-10-2026 e/30-10-2026`.
+2. Run `trip select 1`, then configure a trip budget: `trip budget a/1000`.
+3. Add an expense of $850 dated `10-10-2026`: an 80% trip budget warning appears.
+4. Add another expense of $200 dated `12-10-2026`: total trip spending becomes $1,050 and a trip budget exceeded warning is displayed.
+5. Run `trip summary`: verify that the 3-column ASCII table displays categories, spending amounts, percentages, budget vs. spent, and excess amounts.

@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -43,7 +44,8 @@ class TravelFeaturesTest {
         LocalDate date = LocalDate.of(2020, 1, 1);
         state.getExpenses().add(new Expense("Small", 5, Category.FOOD, date));
         state.getExpenses().add(new Expense("Large", 20, Category.FOOD, date.plusDays(1)));
-        state.getExpenses().add(new SplitExpense("Split", 30, 3, null, Category.FOOD, date));
+        state.getExpenses().add(new SplitExpense("Split", 30, 3, null, Category.FOOD, 
+                date, new ArrayList<>(), null, null, null));
         run("list sort/amount");
         String text = output.toString();
         assertTrue(text.indexOf("2. ") < text.indexOf("3. "));
