@@ -9,14 +9,24 @@ import seedu.tripjio.parser.Parser;
 import seedu.tripjio.storage.Storage;
 import seedu.tripjio.ui.Ui;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * Main entry point of TripJio, a budget tracker and travel app for students.
  */
 public class TripJio {
     private static final String DATA_FILE = "data/tripjio.txt";
+    private static final String LOG_FILE = "data/tripjio.log";
+    private static final Logger logger = Logger.getLogger(TripJio.class.getName());
 
     private final Ui ui;
     private final Storage storage;
@@ -41,6 +51,8 @@ public class TripJio {
         this.ui = ui;
         this.storage = new Storage(filePath);
         this.state = storage.load(ui);
+
+        logger.info("Loaded " + state.getExpenses().size() + " expense(s) from " + filePath);
     }
 
     /**
@@ -57,6 +69,10 @@ public class TripJio {
             String input = ui.readCommand();
             try {
                 Command command = Parser.parse(input);
+                assert command != null : "Parser must return a command or throw";
+
+                logger.fine(() -> "Executing " + command.getClass().getSimpleName());
+
                 command.execute(state, ui);
                 showBudgetWarning(command.getAffectedMonth());
                 showTripBudgetWarning(command.getAffectedDate());
@@ -66,6 +82,7 @@ public class TripJio {
                 }
                 isExit = command.isExit();
             } catch (TripJioException e) {
+                logger.info("Command failed: " + e.getMessage());
                 ui.showError(e.getMessage());
             }
             ui.showLine();
@@ -104,6 +121,25 @@ public class TripJio {
      * @param args command-line arguments (not used).
      */
     public static void main(String[] args) {
+        setUpLogging();
         new TripJio(DATA_FILE).run();
+    }
+
+    private static void setUpLogging() {
+        LogManager.getLogManager().reset();
+        Logger root = Logger.getLogger("");
+
+        try {
+            Files.createDirectories(Path.of(LOG_FILE).getParent());
+
+            FileHandler fileHandler = new FileHandler(LOG_FILE, true);
+            fileHandler.setFormatter(new SimpleFormatter());
+
+            root.addHandler(fileHandler);
+            root.setLevel(Level.INFO);
+            Logger.getLogger("seedu.tripjio").setLevel(Level.FINE);
+        } catch (IOException | SecurityException e) {
+            root.setLevel(Level.OFF);
+        }
     }
 }

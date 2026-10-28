@@ -14,6 +14,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,9 +58,10 @@ class StatsCompareCommandTest {
     void execute_categoryChangesAndSplitShares_correctOutput() throws TripJioException {
         state.getExpenses().add(new Expense("Food", 10.10, Category.FOOD, LocalDate.of(2028, 1, 31)));
         state.getExpenses().add(new Expense("Food", 0.20, Category.FOOD, LocalDate.of(2028, 2, 1)));
-        state.getExpenses().add(new SplitExpense("Food", 90, 3, null, Category.FOOD, LocalDate.of(2028, 2, 29)));
+        state.getExpenses().add(new SplitExpense("Food", 90, 3, null, Category.FOOD, 
+                LocalDate.of(2028, 2, 29), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new SplitExpense("Bus", 100, 4, 12.50,
-                Category.TRANSPORT, LocalDate.of(2028, 1, 1)));
+                Category.TRANSPORT, LocalDate.of(2028, 1, 1), new ArrayList<>(), null, null, null));
         state.getExpenses().add(new Expense("Excluded", 999, Category.FOOD, LocalDate.of(2028, 3, 1)));
         state.getExpenses().add(new Expense("Other year", 999, Category.FOOD, LocalDate.of(2027, 2, 1)));
         Parser.parse("stats compare m/01-2028 m/02-2028").execute(state, ui);

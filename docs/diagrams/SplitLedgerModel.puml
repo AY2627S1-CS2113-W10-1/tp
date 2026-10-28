@@ -1,0 +1,59 @@
+@startuml
+!pragma layout smetana
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontColor #243247
+skinparam defaultFontName Arial
+skinparam defaultFontSize 16
+skinparam ArrowColor #53657A
+skinparam NoteBackgroundColor #FFF8DE
+skinparam NoteBorderColor #BDAA65
+skinparam classBorderColor #60758A
+skinparam classBackgroundColor #E3F3EF
+skinparam classAttributeIconSize 0
+skinparam sequenceLifeLineBackgroundColor #E2EDFC
+skinparam sequenceLifeLineBorderColor #A5B1BE
+skinparam sequenceGroupBackgroundColor #F4F6F9
+skinparam maxMessageSize 180
+hide empty members
+hide circle
+hide footbox
+title Shared bills and signed settlements
+class Expense {
+  #amount: double
+  +getAmount(): double
+}
+class SplitExpense {
+  -customShare: Double
+  -numberOfPeople: int
+  -participantNames: List<String>
+  -payerName: String
+  -currency: String
+  -exchangeRate: Double
+  +getAmount(): double
+  +getTotalAmount(): double
+  +updateAmounts(total, share)
+  +getAmountsOwedToMe(): Map
+}
+class ExpenseList
+class AppState
+class Settlement {
+  -person: String
+  -amount: double
+}
+Expense <|-- SplitExpense
+AppState "1" --> "1" ExpenseList : expenses
+ExpenseList "1" --> "0..*" Expense : expenses {ordered}
+AppState "1" --> "0..*" Settlement : settlements {ordered}
+note bottom of SplitExpense
+  Personal-spending contract:
+  inherited amount = full SGD bill;
+  overridden getAmount() = own share.
+  A null customShare selects equal splitting.
+end note
+note bottom of Settlement
+  Positive = money received by user.
+  Negative = money paid by user.
+  Payments do not change spending.
+end note
+@enduml

@@ -105,4 +105,11 @@ class TripBudgetCommandTest {
         assertTrue(loadedTrip.hasBudget());
         assertEquals(800.00, loadedTrip.getBudget());
     }
+
+    @Test
+    void loadStorageLine_threeDecimalBudget_throwsTripJioException() {
+        TripJioException exception = assertThrows(TripJioException.class,
+                () -> state.getTrips().loadStorageLine("T|Japan|01-10-2026|05-10-2026|1.234"));
+        assertTrue(exception.getMessage().contains("Invalid budget in trip line"));
+    }
 }

@@ -165,9 +165,14 @@ public class TripBook {
             trip.set(DateUtil.parseDate(fields[2]), DateUtil.parseDate(fields[3]));
             if (fields.length == 5) {
                 try {
-                    double budget = Double.parseDouble(fields[4]);
+                    String budgetStr = fields[4].trim();
+                    int dot = budgetStr.indexOf('.');
+                    if (dot >= 0 && budgetStr.length() - dot - 1 > 2) {
+                        throw new TripJioException("Budget must have at most 2 decimal places.");
+                    }
+                    double budget = Double.parseDouble(budgetStr);
                     trip.setBudget(budget);
-                } catch (NumberFormatException e) {
+                } catch (TripJioException | NumberFormatException e) {
                     throw new TripJioException("Invalid budget in trip line: " + line);
                 }
             }
