@@ -65,13 +65,13 @@ class TripFilterCommandTest {
         seed();
         run("stats trip/");
         assertTrue(output.toString().contains("Spending for trip Holiday:"));
-        assertTrue(output.toString().contains("Food: $40.00"));
-        assertTrue(output.toString().contains("Transport: $10.00"));
-        assertTrue(output.toString().contains("TOTAL SPENT: $50.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Food", "$40.00")));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Transport", "$10.00")));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$50.00")));
         output.reset();
         run("stats m/01-2020 trip/");
         assertTrue(output.toString().contains("in January 2020:"));
-        assertTrue(output.toString().contains("TOTAL SPENT: $40.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$40.00")));
         assertEquals(5, state.getExpenses().size());
     }
 
@@ -118,14 +118,14 @@ class TripFilterCommandTest {
         run("trip add n/Next s/03-01-2020 e/03-01-2020");
         output.reset();
         command.execute(state, ui);
-        assertTrue(output.toString().contains("TOTAL SPENT: $999.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$999.00")));
         run("trip select 1");
         output.reset();
         command.execute(state, ui);
-        assertTrue(output.toString().contains("TOTAL SPENT: $50.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$50.00")));
         output.reset();
         run("stats m/01-2020");
-        assertTrue(output.toString().contains("TOTAL SPENT: $1,039.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$1,039.00")));
         for (String input : new String[] {"list trip/", "stats trip/", "split list trip/"}) {
             Command report = Parser.parse(input);
             assertFalse(report.isMutating());
@@ -137,7 +137,7 @@ class TripFilterCommandTest {
     void emptyIntersection_showsEmptyResultsAndZeroCategories() throws Exception {
         seed();
         run("stats trip/ m/01-2010");
-        assertTrue(output.toString().contains("TOTAL SPENT: $0.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$0.00")));
         assertTrue(output.toString().contains("No expenses match the selected trip filter."));
         output.reset();
         run("list trip/ m/01-2010");

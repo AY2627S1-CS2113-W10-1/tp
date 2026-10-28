@@ -88,7 +88,7 @@ class TravelFeaturesTest {
         assertEquals(34.50, state.getExpenses().getTotalSpentInMonth(YearMonth.of(2020, 1)));
         output.reset();
         run("stats m/01-2020");
-        assertTrue(output.toString().contains("TOTAL SPENT: $34.50"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$34.50")));
     }
 
     @Test
