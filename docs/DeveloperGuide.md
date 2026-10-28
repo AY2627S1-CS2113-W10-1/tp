@@ -470,6 +470,12 @@ review before integration.
 
 ### Monthly statistics and comparison
 
+`StatsCommand` and `TripStatsCommand` share `SpendingTable.format` for two-column
+ASCII output. Category labels are left-aligned and SGD amounts right-aligned in
+minimum 15-character columns, matching the comparison table style. Monthly reports
+use a short month heading; trip reports use `Amount (SGD)`. A separator introduces
+the `Total` row. Formatting does not change filtering, rounding or read-only behaviour.
+
 #### Implementation
 
 `Parser` delegates `stats` to `StatsCommandParser`. It uses `ArgumentParser` to
