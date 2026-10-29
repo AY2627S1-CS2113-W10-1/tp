@@ -32,6 +32,7 @@ public class HelpCommand extends Command {
         "Amounts and reports use SGD; rates are manual, not live.",
         "stats [m/MONTH] [trip/]",
         "stats compare m/MONTH m/MONTH",
+        "export [c/CATEGORY] [m/MONTH] [trip/]",
         "exit"
     };
 

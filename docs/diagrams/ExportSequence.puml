@@ -10,7 +10,7 @@ skinparam sequenceParticipantBorderColor #60758A
 skinparam sequenceLifeLineBorderColor #A5B1BE
 skinparam sequenceGroupBorderColor #8D9BAD
 skinparam sequenceGroupBackgroundColor #F4F6F9
-title [Proposed] Executing "export m/10-2026 trip/"
+title Executing "export m/10-2026 trip/"
 participant "app: TripJio" as App #E8EDF3
 participant "c: ExportCommand" as Cmd #E2EDFC
 participant "ExpenseFilter" as Filter #E3F3EF
@@ -29,9 +29,9 @@ opt no expense matches
 Cmd -> Ui : showMessage("No expenses match ...")
 note right of Cmd : returns here;\nno file is written
 end
-Cmd -> Csv : toCsvLines(indexedExpenses)
+Cmd -> Csv : toCsvLines(allExpenses, selected)
 activate Csv
-loop each matching expense
+loop each expense in the full list that is selected
 Csv -> Exp : toCsvFields(index)
 activate Exp
 note right : overridden by\nsubclasses

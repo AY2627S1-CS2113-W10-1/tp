@@ -10,7 +10,7 @@ skinparam NoteBorderColor #BDAA65
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 hide empty members
-title [Proposed] Classes involved in export
+title Classes involved in export
 abstract class Command {
   +execute(state, ui)
 }
@@ -24,8 +24,8 @@ class ExportCommandParser {
   +{static} parse(args): Command
 }
 class CsvExporter {
-  +{static} HEADER: String
-  +{static} toCsvLines(expenses): List<String>
+  +{static} HEADER: List<String>
+  +{static} toCsvLines(allExpenses, selected): List<String>
   +{static} escape(field): String
   +{static} write(path, lines)
 }

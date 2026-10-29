@@ -35,6 +35,26 @@ public class ExportCommand extends Command {
         this.filePath = filePath;
     }
 
+    /** Returns the category filter, or null for all categories. */
+    public Category getCategory() {
+        return category;
+    }
+
+    /** Returns the month filter, or null for all months. */
+    public YearMonth getMonth() {
+        return month;
+    }
+
+    /** Returns whether only expenses within the selected trip's dates are exported. */
+    public boolean isTripOnly() {
+        return tripOnly;
+    }
+
+    /** Returns the path of the file the export is written to. */
+    public String getFilePath() {
+        return filePath;
+    }
+
     @Override
     public void execute(AppState state, Ui ui) throws TripJioException {
         List<Expense> selected = ExpenseFilter.select(state, category, month, tripOnly);
