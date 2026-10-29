@@ -64,6 +64,8 @@ public class Parser {
             return StatsCommandParser.parse(args);
         case "export":
             return ExportCommandParser.parse(args);
+        case "forecast":
+            return ForecastCommandParser.parse(args);
         default:
             throw new TripJioException("Unknown command: " + commandWord + ". Type help to see all commands.");
         }
