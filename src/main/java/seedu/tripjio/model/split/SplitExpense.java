@@ -244,4 +244,20 @@ public class SplitExpense extends Expense {
             throw new TripJioException("Invalid number in split expense storage line.");
         }
     }
+
+    /** Fills the full SGD bill, people and, for a foreign split, currency and rate columns. */
+    @Override
+    public List<String> toCsvFields(int index) {
+        List<String> fields = super.toCsvFields(index);
+        fields.set(CSV_TYPE, "Split");
+        fields.set(CSV_FULL_BILL, MoneyUtil.toStorageString(getTotalAmount()));
+        fields.set(CSV_PEOPLE, String.valueOf(numberOfPeople));
+
+        // Only the converted SGD bill is kept, so the original-amount column stays empty.
+        if (currency != null) {
+            fields.set(CSV_CURRENCY, currency);
+            fields.set(CSV_RATE, BigDecimal.valueOf(exchangeRate).stripTrailingZeros().toPlainString());
+        }
+        return fields;
+    }
 }

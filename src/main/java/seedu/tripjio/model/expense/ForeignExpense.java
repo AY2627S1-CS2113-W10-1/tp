@@ -7,6 +7,7 @@ import seedu.tripjio.util.MoneyUtil;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.List;
 
 /** Keeps original currency and a fixed manual rate while exposing SGD spending to existing reports. */
 public class ForeignExpense extends Expense {
@@ -77,5 +78,16 @@ public class ForeignExpense extends Expense {
         }
         return new ForeignExpense(fields[1].trim(), original, category, DateUtil.parseDate(fields[4]),
                 fields[5], ExchangeRates.parseRate(fields[6]));
+    }
+
+    /** Fills the original amount, currency and rate columns; the amount column stays in SGD. */
+    @Override
+    public List<String> toCsvFields(int index) {
+        List<String> fields = super.toCsvFields(index);
+        fields.set(CSV_TYPE, "Foreign");
+        fields.set(CSV_ORIGINAL_AMOUNT, MoneyUtil.toStorageString(originalAmount));
+        fields.set(CSV_CURRENCY, currency);
+        fields.set(CSV_RATE, rate.stripTrailingZeros().toPlainString());
+        return fields;
     }
 }

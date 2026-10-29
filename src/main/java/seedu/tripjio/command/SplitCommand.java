@@ -68,4 +68,9 @@ public class SplitCommand extends Command {
     public YearMonth getAffectedMonth() {
         return YearMonth.from(date);
     }
+
+    @Override
+    public LocalDate getAffectedDate() {
+        return date;
+    }
 }

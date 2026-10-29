@@ -17,7 +17,7 @@
   - [Trip management and selected-trip reporting](#trip-management-and-selected-trip-reporting)
   - [Monthly statistics and comparison](#monthly-statistics-and-comparison)
   - [Manual currency conversion](#manual-currency-conversion)
-  - [[Proposed] Export to CSV](#proposed-export-to-csv)
+  - [Export to CSV](#export-to-csv)
 - [Maintaining the diagrams](#maintaining-the-diagrams)
 - [Product scope](#product-scope)
 - [User stories](#user-stories)
@@ -42,7 +42,7 @@ listing, monthly budget configuration/status/warnings, named-trip management,
 manual exchange rates, monthly statistics/comparisons, selected-trip reports,
 trip budgets and overspending warnings, trip summary breakdowns and spending forecasting.
 Named split participants, repayments (`owe`/`settle`), foreign-currency splits
-and `edit ... my/` are also implemented. Export and recurring expenses remain planned work. The global command-output separator and aligned monthly comparison table
+and `edit ... my/` are also implemented, as is CSV export. Recurring expenses remain planned work. The global command-output separator and aligned monthly comparison table
 are implemented.
 
 ## Setting up and testing
@@ -690,7 +690,7 @@ allow it; comparisons and mutating commands reject it.
 `ExpenseList.getExpensesBetween(start, end)` returns a fresh insertion-ordered
 list including both endpoints; invalid/null ranges throw IllegalArgumentException.
 `ExpenseFilter.select(state, category, month, tripOnly)` is the shared filtering
-entry point for commands and future export. It validates selection before returning
+entry point for `list`, `split list`, `stats` and `export`. It validates selection before returning
 results, resolves it at execution time, and intersects trip dates/month/category.
 The returned list is independent, but contains the original Expense objects.
 
@@ -933,19 +933,19 @@ The base reporting currency remains SGD. Shared bills use their own explicit
 `cur/` plus `rate/` input as described in Shared-bill expenses; personal foreign
 expenses continue to use configured manual rates. `TravelFeaturesTest` covers conversion, rate changes and persistence.
 
-### [Proposed] Export to CSV
+### Export to CSV
 
-This feature is planned for v2.0 and is not implemented yet. It lets users open
-their spending in a spreadsheet (e.g. Excel, Numbers or Google Sheets) to make their
-own charts or share a trip's costs with friends.
+This feature lets users open their spending in a spreadsheet (e.g. Excel, Numbers
+or Google Sheets) to make their own charts or share a trip's costs with friends.
 
-#### Proposed behaviour
+#### Behaviour
 
 `export [c/CATEGORY] [m/MONTH] [trip/]` writes the matching expenses to
 `data/export.csv`, replacing any earlier export, and prints a message such as
 `Exported 3 expenses to data/export.csv.` The filters mean exactly the same as in
-`list`. If no expense matches, TripJio prints `No expenses match the given filter.`
-and writes no file. The command never changes expenses, so it is not a mutating
+`list`. If no expense matches, TripJio prints
+`No expenses match the given filter. Nothing was exported.` and writes no file, so an
+earlier export is kept. The command never changes expenses, so it is not a mutating
 command and the data file is not saved again.
 
 Each row is one expense, after a header row:
@@ -960,25 +960,35 @@ Index,Date,Description,Category,Amount (SGD),Type,Full bill (SGD),People,Origina
 `Amount (SGD)` is always the user's own spending (`getAmount()`), so the column
 total in a spreadsheet matches TripJio's own totals. Columns that do not apply to
 an expense type are left empty. `Index` is the expense's global index, as in `list`.
+A foreign split keeps only its converted SGD bill, so its `Original amount` is empty
+while `Currency` and `Rate` are filled.
 
-#### Proposed implementation
+#### Implementation
 
-<img src="images/ExportClassDiagram.svg" alt="Classes involved in export" width="671">
+<img src="images/ExportClassDiagram.svg" alt="Classes involved in export" width="703">
 
 The feature reuses existing parts of the architecture wherever possible:
 
 - **Parsing.** `ExportCommandParser` accepts the same `c/`, `m/` and `trip/`
   arguments as `list` (no sorting), using `ArgumentParser.checkAllowedPrefixes`
-  and `getFlag("trip")`. `Parser` gets one new `case "export"` line.
+  and `getFlag("trip")`. `Parser` has one `case "export"` line.
 - **Filtering.** `ExportCommand` calls `ExpenseFilter.select(state, category, month,
   tripOnly)`, the same shared helper used by `list`, `split list` and `stats trip/`.
   The export therefore always contains exactly the expenses that `list` shows with
   the same filters, and a missing trip selection produces the same error.
-- **Rows.** `Expense` gets a new method `toCsvFields(index)` that returns the values
-  of one row. `SplitExpense` and `ForeignExpense` override it to fill their own
-  columns, in the same way they already override `toStorageString()`. `CsvExporter`
-  never checks the type of an expense, so a new expense type only needs its own
-  override.
+- **Rows.** `Expense.toCsvFields(index)` returns the values of one row: the six
+  common columns, then empty placeholders for the type-specific ones.
+  `SplitExpense` and `ForeignExpense` override it, call `super.toCsvFields(index)`
+  and fill their own columns, in the same way they already override
+  `toStorageString()`. The column positions are named constants in `Expense`
+  (`CSV_TYPE`, `CSV_FULL_BILL`, `CSV_PEOPLE`, `CSV_ORIGINAL_AMOUNT`, `CSV_CURRENCY`,
+  `CSV_RATE`), matching `CsvExporter.HEADER`, so a subclass sets a column by name
+  instead of a bare number. `CsvExporter` never checks the type of an expense, so a
+  new expense type only needs its own override.
+- **Global indexes.** `CsvExporter.toCsvLines(allExpenses, selected)` walks the full
+  list and writes a row only for the selected expenses, numbering each by its
+  position in the full list. The `Index` column therefore matches `list` and can be
+  used with `edit` and `delete`.
 - **Escaping and writing.** `CsvExporter` is a small helper in the `storage` package.
   `escape(field)` follows the common CSV rule (RFC 4180): a field containing a comma,
   a double quote or a line break is wrapped in double quotes, and each double quote
@@ -1003,13 +1013,13 @@ and no thousands separator), so spreadsheets read them as numbers.
 The sequence diagram below shows `export m/10-2026 trip/`. Escaping happens inside
 `toCsvLines` and is left out of the diagram.
 
-<img src="images/ExportSequence.svg" alt="Export execution sequence" width="802">
+<img src="images/ExportSequence.svg" alt="Export execution sequence" width="806">
 
 #### Design considerations
 
 Aspect: How each row is built for different expense types.
 
-- Alternative 1 (proposed): Each expense class builds its own row with `toCsvFields`.
+- Alternative 1 (current choice): Each expense class builds its own row with `toCsvFields`.
   - Pros: Follows the existing `toStorageString` design; no `instanceof` checks;
     a new expense type cannot be forgotten by the exporter.
   - Cons: The model knows about one more output format.
@@ -1019,7 +1029,7 @@ Aspect: How each row is built for different expense types.
 
 Aspect: Date format in the file.
 
-- Alternative 1 (proposed): ISO format `YYYY-MM-DD`.
+- Alternative 1 (current choice): ISO format `YYYY-MM-DD`.
   - Pros: Spreadsheets recognise it as a date in every region and sort it correctly.
   - Cons: Differs from the `DD-MM-YYYY` format used in commands.
 - Alternative 2: `DD-MM-YYYY`, as in the rest of TripJio.
@@ -1028,20 +1038,26 @@ Aspect: Date format in the file.
 
 Aspect: Text encoding.
 
-- Alternative 1 (proposed): UTF-8 with a byte-order mark.
+- Alternative 1 (current choice): UTF-8 with a byte-order mark.
   - Pros: Excel then shows descriptions such as `Phở` or `Café` correctly.
   - Cons: A few simple text tools show the mark as an extra character.
 - Alternative 2: UTF-8 without a byte-order mark, like `data/tripjio.txt`.
   - Pros: Identical to the data file.
   - Cons: Excel may show non-English characters incorrectly.
 
-#### Planned tests
+#### Tests
 
-- `CsvExporterTest`: escaping of commas, double quotes and line breaks; header row;
-  empty columns for each expense type.
+- `CsvExporterTest`: escaping of commas, double quotes and line breaks; header row
+  first; only selected expenses with their global indexes; UTF-8 with a BOM and
+  creation of a missing folder.
+- `ExpenseTest` and `SplitExpenseTest`: the exact row of each expense type, including
+  custom shares, foreign splits and rates without trailing zeros or scientific notation.
 - `ExportCommandTest`: uses a JUnit `@TempDir`; checks that the rows match `list` with
-  the same filters, that no file is written when nothing matches, and that the data
-  in `AppState` does not change.
+  the same filters, the trip filter including both end dates, that no file is written
+  when nothing matches or no trip is selected, and that the data in `AppState` does
+  not change.
+- `ExportCommandParserTest`: all filters in any order and case, and rejection of
+  invalid, repeated or unsupported arguments such as `sort/` and `trip/1`.
 
 ## Maintaining the diagrams
 
@@ -1097,7 +1113,7 @@ Stories marked *planned* are not implemented yet.
 | `* *` | group traveller | record full or partial repayments | see the remaining net balance |
 | `* *` | group traveller | safely edit my own share | correct my spending without partially changing the bill |
 | `* *` | traveller | split a foreign bill using an explicit rate | count my share and debts in SGD |
-| `*` | student | export my spending (*planned*) | analyse it outside the app |
+| `*` | student | export my spending | analyse it outside the app |
 
 ## Non-functional requirements
 
@@ -1227,3 +1243,17 @@ Use a new isolated folder for each independent scenario; expense dates must be i
 3. Add an expense of $850 dated `10-10-2026`: an 80% trip budget warning appears.
 4. Add another expense of $200 dated `12-10-2026`: total trip spending becomes $1,050 and a trip budget exceeded warning is displayed.
 5. Run `trip summary`: verify that the 3-column ASCII table displays categories, spending amounts, percentages, budget vs. spent, and excess amounts.
+
+### Exporting to CSV
+
+1. In a fresh instance, run `export`: `No expenses match the given filter. Nothing was exported.`
+   is shown and no `data/export.csv` is created.
+2. Add `add d/Lunch a/12.50 c/food dt/15-10-2026`, `add d/Metro card a/45 c/transport dt/02-10-2026`
+   and `split d/Group dinner a/90 n/3 c/food dt/14-10-2026`, then run `export`.
+   `Exported 3 expenses to data/export.csv.` is shown. Open the file in a spreadsheet:
+   there is a header row and 3 rows, `Amount (SGD)` sums to the `list` total ($87.50),
+   and the split row has `90.00` and `3` in `Full bill (SGD)` and `People`.
+3. Run `export c/food`: the file now has only rows `1` and `3`, keeping the indexes from `list`.
+4. Run `export trip/` with no trip selected: an error is shown and the previous file is unchanged.
+5. Add `add d/Ramen, "large" a/12 c/food` and export again: the description stays in one
+   column. Try `export sort/amount` and `export trip/1`: both are rejected.

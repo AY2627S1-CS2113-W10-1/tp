@@ -2,6 +2,7 @@ package seedu.tripjio.parser;
 
 import seedu.tripjio.command.BudgetStatusCommand;
 import seedu.tripjio.command.ExitCommand;
+import seedu.tripjio.command.ForecastCommand;
 import seedu.tripjio.command.HelpCommand;
 import seedu.tripjio.command.SetBudgetCommand;
 import seedu.tripjio.exception.TripJioException;
@@ -47,5 +48,11 @@ class ParserTest {
     void parse_budgetCommand_returnsBudgetCommand() throws TripJioException {
         assertInstanceOf(SetBudgetCommand.class, Parser.parse("budget set a/1000"));
         assertInstanceOf(BudgetStatusCommand.class, Parser.parse("budget status"));
+    }
+
+    @Test
+    void parse_forecastCommand_returnsForecastCommand() throws TripJioException {
+        assertInstanceOf(ForecastCommand.class, Parser.parse("forecast"));
+        assertInstanceOf(ForecastCommand.class, Parser.parse("forecast m/10-2026"));
     }
 }

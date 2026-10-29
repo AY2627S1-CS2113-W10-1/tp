@@ -12,7 +12,8 @@ With TripJio you can:
 * record expenses in other currencies using exchange rates you enter yourself (counted in SGD),
 * split a group bill (e.g. a dinner with friends) and record only **your share**,
 * set a **monthly budget** and get warned before you overspend,
-* plan several **trips**, see how much you spent on each, and view spending statistics.
+* plan several **trips**, see how much you spent on each, and view spending statistics,
+* **export** your expenses to a CSV file and open them in Excel, Numbers or Google Sheets.
 
 ---
 
@@ -25,9 +26,10 @@ With TripJio you can:
   * [**Expenses**](#expenses): `add`, `list`, `edit`, `delete`, sorting
   * [**Exchange rates**](#exchange-rates): `rate set`, `rate list`
   * [**Split expenses**](#split-expenses): `split`, `split list`, `owe`, `settle`
-  * [**Monthly budget**](#monthly-budget): `budget set`, `budget status`, budget warnings
-  * [**Trips**](#trips): `trip set`, `trip status`, `trip add`, `trip list`, `trip select`, `trip edit`, `trip delete`, `trip/` filtering
+  * [**Monthly budget**](#monthly-budget): `budget set`, `budget status`, budget warnings, `forecast`
+  * [**Trips**](#trips): `trip set`, `trip status`, `trip add`, `trip list`, `trip select`, `trip edit`, `trip delete`, `trip budget`, `trip summary`, `trip/` filtering
   * [**Statistics**](#statistics): `stats`, `stats compare`
+  * [Exporting expenses: `export`](#exporting-expenses-export)
   * [Exiting the program: `exit`](#exiting-the-program-exit)
   * [Saving the data](#saving-the-data)
   * [Editing the data file](#editing-the-data-file)
@@ -136,11 +138,15 @@ trip list
 trip select INDEX
 trip edit INDEX [n/NAME] [s/START_DATE] [e/END_DATE]
 trip delete INDEX
+trip budget a/AMOUNT
+trip summary
+forecast [m/MONTH]
 rate set from/CURRENCY to/SGD r/RATE
 rate list
 Amounts and reports use SGD; rates are manual, not live.
 stats [m/MONTH] [trip/]
 stats compare m/MONTH m/MONTH
+export [c/CATEGORY] [m/MONTH] [trip/]
 exit
 ```
 
@@ -670,6 +676,52 @@ After you `add`, `split` or `edit` an expense, TripJio automatically checks the 
 
 No warning is shown if that month has no budget.
 
+#### Trip budget warnings
+
+If the expense date falls within the currently selected trip's date range and the trip has an allocated budget (set via `trip budget a/AMOUNT`), TripJio also checks the trip's overall spending:
+
+* When you reach **80%** of the trip budget:
+  ```
+  Warning: You have used 80% or more of your budget for trip Japan! Spent: $800.00 / $1,000.00 ($200.00 remaining).
+  ```
+* When you go **over** the trip budget:
+  ```
+  Warning: You have exceeded your budget for trip Japan! Spent: $1,050.00 / $1,000.00 ($50.00 over budget).
+  ```
+
+> Trip warnings evaluate against the **currently selected trip only**, not every configured trip that contains the expense date.
+
+---
+
+### Forecasting monthly spending: `forecast`
+
+Forecasts your projected total spending by the end of the month based on your current spending pace, comparing it against your monthly budget.
+
+* **Format**: `forecast [m/MONTH]`
+* **Parameters**:
+  * `[m/MONTH]`: Optional month in `MM-YYYY` format. If omitted, forecasts the **current ongoing month**.
+* **Formula**:
+  $$\text{Projected Total Spending} = \frac{\text{Spent so far}}{\text{Days passed}} \times \text{Days in month}$$
+* **Examples**:
+  * `forecast`
+  * `forecast m/10-2026`
+* **Expected Output (Current Month - On Track)**:
+  ```text
+  Forecasting spending for October 2026 (15 of 31 days passed):
+    Budget: $1,000.00
+    Spent so far: $400.00 (average $26.67/day)
+    Projected total: $826.77
+    Status: On track! Projected to stay within budget ($173.23 remaining).
+  ```
+* **Expected Output (Current Month - Projected to Exceed)**:
+  ```text
+  Forecasting spending for October 2026 (15 of 31 days passed):
+    Budget: $1,000.00
+    Spent so far: $600.00 (average $40.00/day)
+    Projected total: $1,240.00
+    Status: Warning! Projected to exceed budget by $240.00.
+  ```
+
 ---
 
 ## Trips
@@ -786,6 +838,62 @@ overlapping trips can count the same expense. Selecting a trip does not filter
 
 ---
 
+### Setting a trip budget: `trip budget`
+
+Sets an overall budget for the currently selected trip.
+
+* **Format**: `trip budget a/AMOUNT`
+* **Parameters**:
+  * `a/AMOUNT`: The total budget allocated for the selected trip. Must be a positive amount up to `$1,000,000.00` with at most 2 decimal places.
+* **Example**:
+  ```text
+  trip budget a/1500
+  ```
+* **Expected Output**:
+  ```text
+  Budget for trip Japan set to $1,500.00.
+  ```
+* **Notes**:
+  * Requires a trip to be currently selected (e.g. via `trip select INDEX` or `trip add`). If no trip is selected, an error prompts you to select or create a trip first.
+  * The trip budget is saved automatically with the trip in `data/tripjio.txt`.
+
+---
+
+### Summarizing trip finances: `trip summary`
+
+Displays a comprehensive financial overview of the currently selected trip, including dates, duration, phase status, remaining trip days, budget comparison, daily allowance, and an aligned breakdown table of spending across all six categories.
+
+* **Format**: `trip summary` (no parameters)
+* **Details**:
+  * **Trip & Budget Status**: Compares total spending against the allocated trip budget (configured via `trip budget a/AMOUNT`), showing remaining budget or over-budget amounts.
+  * **Daily Allowance**: Calculates remaining budget divided by remaining trip days. If over budget, shows `$0.00/day`. If completed or no budget is set, indicates as `N/A`.
+  * **Category Breakdown Table**: Formatted in aligned columns showing each category's total spending within the trip dates, along with its percentage share of total trip expenses.
+* **Example Output (for an ongoing trip with budget)**:
+  ```text
+  Trip summary: Japan
+    Dates: 01-12-2026 to 14-12-2026 (14 day(s))
+    Status: Ongoing
+    Remaining trip days: 10
+    Budget: $1,500.00
+    Total spent: $300.00
+    Remaining budget: $1,200.00
+    Daily allowance: $120.00/day
+
+  Spending by category:
+  Category                  Spent      % of Total
+  -----------------------------------------------
+  Food                    $150.00           50.0%
+  Transport               $100.00           33.3%
+  Accommodation             $0.00            0.0%
+  Entertainment             $0.00            0.0%
+  Shopping                 $50.00           16.7%
+  Other                     $0.00            0.0%
+  -----------------------------------------------
+  Total                   $300.00          100.0%
+  ```
+
+---
+
 <!-- @@author teetoozs -->
 ### Selected-trip filtering
 
@@ -893,6 +1001,66 @@ If neither month has any expenses, the table shows `$0.00` everywhere, followed 
 
 ```
 No expenses recorded for either month. :(
+```
+
+---
+
+### Exporting expenses: `export`
+
+Saves your expenses to a CSV file, so you can open them in a spreadsheet (e.g. Excel, Numbers or Google Sheets) to make your own charts or share a trip's costs with friends.
+
+Format: `export [c/CATEGORY] [m/MONTH] [trip/]`
+
+* The filters work exactly like in [`list`](#listing-expenses-list): an expense is exported only if it matches all of them. Without filters, all expenses are exported.
+* `trip/` exports only expenses dated within the **selected trip** (both end dates included). A trip must be selected first, see [Selected-trip filtering](#selected-trip-filtering).
+* Sorting (`sort/`, `order/`) is not supported; rows are always in the order the expenses were added.
+* The file is always `data/export.csv`, in the same folder as your data file. **Each export replaces the previous one**, so rename or move the file first if you want to keep it.
+* If no expense matches, no file is written (an earlier export is kept unchanged).
+* Exporting does not change your data, and TripJio never reads `export.csv` back. Editing it does not affect your expenses.
+
+Each row is one expense, after a header row:
+
+| Column | Meaning |
+|---|---|
+| `Index` | The expense's number in `list`, so you can use it with `edit` and `delete`. |
+| `Date` | The date as `YYYY-MM-DD` (e.g. `2026-10-15`), which spreadsheets read as a date in every region. |
+| `Description`, `Category` | As shown in `list`. |
+| `Amount (SGD)` | **Your own spending** in SGD: your share for split expenses, the converted amount for foreign-currency expenses. Summing this column gives the same total as `list`. |
+| `Type` | `Personal`, `Split` or `Foreign`. |
+| `Full bill (SGD)`, `People` | Split expenses only: the whole bill in SGD and the number of people. |
+| `Original amount` | Foreign-currency expenses only: the amount in the original currency. |
+| `Currency`, `Rate` | Foreign-currency expenses and foreign-currency splits: the currency code and the SGD rate used. |
+
+Columns that do not apply to an expense are left empty. Amounts have two decimal places and no `$` or thousands separator, so spreadsheets read them as numbers.
+
+Examples:
+
+* `export` exports all expenses.
+* `export c/food m/10-2026` exports food expenses in October 2026.
+* `export trip/` exports the expenses of the selected trip.
+
+Expected output for `export` (with the four expenses from the `list` example):
+
+```
+Exported 4 expenses to data/export.csv.
+```
+
+Contents of `data/export.csv`:
+
+```
+Index,Date,Description,Category,Amount (SGD),Type,Full bill (SGD),People,Original amount,Currency,Rate
+1,2026-10-15,Lunch,Food,12.50,Personal,,,,,
+2,2026-10-02,Metro card,Transport,45.00,Personal,,,,,
+3,2026-10-14,Group dinner,Food,30.00,Split,90.00,3,,,
+4,2026-10-10,Ramen,Food,17.40,Foreign,,,12.00,EUR,1.45
+```
+
+A description that contains a comma or a double quote is wrapped in double quotes in the file (e.g. `"Ramen, large"`), so it stays in one column.
+
+If no expense matches the filters (or you have no expenses):
+
+```
+No expenses match the given filter. Nothing was exported.
 ```
 
 ---
@@ -1005,6 +1173,9 @@ releases do not understand the new records.
 **Q**: Can I create my own categories?<br>
 **A**: Not at the moment. Use `other` for expenses that do not fit the six built-in categories.
 
+**Q**: How do I open my expenses in Excel or Google Sheets?<br>
+**A**: Run `export`, then open `data/export.csv` in Excel or Numbers, or import it in Google Sheets with **File → Import**. See [Exporting expenses](#exporting-expenses-export).
+
 **Q**: Can I manually edit `data/tripjio.txt`?<br>
 **A**: Yes, but back up the file first. Supported blocks include `[expense]`, `[budget]`, `[trips]`, `[rates]` and `[owe]`. See [Editing the data file](#editing-the-data-file). Invalid supported records are skipped with warnings; a later save omits them.
 
@@ -1035,13 +1206,17 @@ releases do not understand the new records.
 | **Record repayment** | `settle p/NAME [a/AMOUNT]`<br>e.g. `settle p/Alice a/10` |
 | **Set monthly budget** | `budget set a/AMOUNT [m/MONTH]`<br>e.g. `budget set a/1000`, `budget set a/1500 m/12-2026` |
 | **View budget status** | `budget status [m/MONTH]`<br>e.g. `budget status` |
+| **Forecast monthly spending** | `forecast [m/MONTH]`<br>e.g. `forecast`, `forecast m/10-2026` |
 | **Add trip** | `trip add n/NAME s/START_DATE e/END_DATE`<br>e.g. `trip add n/Japan s/01-12-2026 e/14-12-2026` |
 | **List trips** | `trip list` |
 | **Select trip** | `trip select INDEX`<br>e.g. `trip select 1` |
 | **Set trip dates** | `trip set s/START_DATE e/END_DATE`<br>e.g. `trip set s/10-12-2026 e/24-12-2026` |
 | **Edit trip** | `trip edit INDEX [n/NAME] [s/START_DATE] [e/END_DATE]`<br>e.g. `trip edit 1 n/Tokyo` |
 | **Delete trip** | `trip delete INDEX`<br>e.g. `trip delete 1` |
+| **Set trip budget** | `trip budget a/AMOUNT`<br>e.g. `trip budget a/1500` |
 | **View trip status** | `trip status` |
+| **View trip summary** | `trip summary` |
 | **Monthly statistics** | `stats [m/MONTH] [trip/]`<br>e.g. `stats m/09-2026`, `stats trip/` |
 | **Compare two months** | `stats compare m/MONTH m/MONTH`<br>e.g. `stats compare m/09-2026 m/10-2026` |
+| **Export to CSV** | `export [c/CATEGORY] [m/MONTH] [trip/]`<br>e.g. `export c/food m/10-2026`, `export trip/` |
 | **Exit** | `exit` |
