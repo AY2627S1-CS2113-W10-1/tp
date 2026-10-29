@@ -12,7 +12,8 @@ With TripJio you can:
 * record expenses in other currencies using exchange rates you enter yourself (counted in SGD),
 * split a group bill (e.g. a dinner with friends) and record only **your share**,
 * set a **monthly budget** and get warned before you overspend,
-* plan several **trips**, see how much you spent on each, and view spending statistics.
+* plan several **trips**, see how much you spent on each, and view spending statistics,
+* **export** your expenses to a CSV file and open them in Excel, Numbers or Google Sheets.
 
 ---
 
@@ -28,6 +29,7 @@ With TripJio you can:
   * [**Monthly budget**](#monthly-budget): `budget set`, `budget status`, budget warnings, `forecast`
   * [**Trips**](#trips): `trip set`, `trip status`, `trip add`, `trip list`, `trip select`, `trip edit`, `trip delete`, `trip budget`, `trip summary`, `trip/` filtering
   * [**Statistics**](#statistics): `stats`, `stats compare`
+  * [Exporting expenses: `export`](#exporting-expenses-export)
   * [Exiting the program: `exit`](#exiting-the-program-exit)
   * [Saving the data](#saving-the-data)
   * [Editing the data file](#editing-the-data-file)
@@ -144,6 +146,7 @@ rate list
 Amounts and reports use SGD; rates are manual, not live.
 stats [m/MONTH] [trip/]
 stats compare m/MONTH m/MONTH
+export [c/CATEGORY] [m/MONTH] [trip/]
 exit
 ```
 
@@ -1000,6 +1003,66 @@ No expenses recorded for either month. :(
 
 ---
 
+### Exporting expenses: `export`
+
+Saves your expenses to a CSV file, so you can open them in a spreadsheet (e.g. Excel, Numbers or Google Sheets) to make your own charts or share a trip's costs with friends.
+
+Format: `export [c/CATEGORY] [m/MONTH] [trip/]`
+
+* The filters work exactly like in [`list`](#listing-expenses-list): an expense is exported only if it matches all of them. Without filters, all expenses are exported.
+* `trip/` exports only expenses dated within the **selected trip** (both end dates included). A trip must be selected first, see [Selected-trip filtering](#selected-trip-filtering).
+* Sorting (`sort/`, `order/`) is not supported; rows are always in the order the expenses were added.
+* The file is always `data/export.csv`, in the same folder as your data file. **Each export replaces the previous one**, so rename or move the file first if you want to keep it.
+* If no expense matches, no file is written (an earlier export is kept unchanged).
+* Exporting does not change your data, and TripJio never reads `export.csv` back. Editing it does not affect your expenses.
+
+Each row is one expense, after a header row:
+
+| Column | Meaning |
+|---|---|
+| `Index` | The expense's number in `list`, so you can use it with `edit` and `delete`. |
+| `Date` | The date as `YYYY-MM-DD` (e.g. `2026-10-15`), which spreadsheets read as a date in every region. |
+| `Description`, `Category` | As shown in `list`. |
+| `Amount (SGD)` | **Your own spending** in SGD: your share for split expenses, the converted amount for foreign-currency expenses. Summing this column gives the same total as `list`. |
+| `Type` | `Personal`, `Split` or `Foreign`. |
+| `Full bill (SGD)`, `People` | Split expenses only: the whole bill in SGD and the number of people. |
+| `Original amount` | Foreign-currency expenses only: the amount in the original currency. |
+| `Currency`, `Rate` | Foreign-currency expenses and foreign-currency splits: the currency code and the SGD rate used. |
+
+Columns that do not apply to an expense are left empty. Amounts have two decimal places and no `$` or thousands separator, so spreadsheets read them as numbers.
+
+Examples:
+
+* `export` exports all expenses.
+* `export c/food m/10-2026` exports food expenses in October 2026.
+* `export trip/` exports the expenses of the selected trip.
+
+Expected output for `export` (with the four expenses from the `list` example):
+
+```
+Exported 4 expenses to data/export.csv.
+```
+
+Contents of `data/export.csv`:
+
+```
+Index,Date,Description,Category,Amount (SGD),Type,Full bill (SGD),People,Original amount,Currency,Rate
+1,2026-10-15,Lunch,Food,12.50,Personal,,,,,
+2,2026-10-02,Metro card,Transport,45.00,Personal,,,,,
+3,2026-10-14,Group dinner,Food,30.00,Split,90.00,3,,,
+4,2026-10-10,Ramen,Food,17.40,Foreign,,,12.00,EUR,1.45
+```
+
+A description that contains a comma or a double quote is wrapped in double quotes in the file (e.g. `"Ramen, large"`), so it stays in one column.
+
+If no expense matches the filters (or you have no expenses):
+
+```
+No expenses match the given filter. Nothing was exported.
+```
+
+---
+
 ### Exiting the program: `exit`
 
 Saves your data and exits TripJio.
@@ -1108,6 +1171,9 @@ releases do not understand the new records.
 **Q**: Can I create my own categories?<br>
 **A**: Not at the moment. Use `other` for expenses that do not fit the six built-in categories.
 
+**Q**: How do I open my expenses in Excel or Google Sheets?<br>
+**A**: Run `export`, then open `data/export.csv` in Excel or Numbers, or import it in Google Sheets with **File → Import**. See [Exporting expenses](#exporting-expenses-export).
+
 **Q**: Can I manually edit `data/tripjio.txt`?<br>
 **A**: Yes, but back up the file first. Supported blocks include `[expense]`, `[budget]`, `[trips]`, `[rates]` and `[owe]`. See [Editing the data file](#editing-the-data-file). Invalid supported records are skipped with warnings; a later save omits them.
 
@@ -1150,4 +1216,5 @@ releases do not understand the new records.
 | **View trip summary** | `trip summary` |
 | **Monthly statistics** | `stats [m/MONTH] [trip/]`<br>e.g. `stats m/09-2026`, `stats trip/` |
 | **Compare two months** | `stats compare m/MONTH m/MONTH`<br>e.g. `stats compare m/09-2026 m/10-2026` |
+| **Export to CSV** | `export [c/CATEGORY] [m/MONTH] [trip/]`<br>e.g. `export c/food m/10-2026`, `export trip/` |
 | **Exit** | `exit` |

@@ -62,6 +62,8 @@ public class Parser {
             return RateCommandParser.parse(args);
         case "stats":
             return StatsCommandParser.parse(args);
+        case "export":
+            return ExportCommandParser.parse(args);
         case "forecast":
             return ForecastCommandParser.parse(args);
         default:

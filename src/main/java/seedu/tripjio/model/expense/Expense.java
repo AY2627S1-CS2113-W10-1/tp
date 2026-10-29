@@ -6,6 +6,8 @@ import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Represents a single expense recorded by the user, with a description, amount, category and date.
@@ -13,6 +15,17 @@ import java.time.YearMonth;
  * counts towards the user's spending.
  */
 public class Expense {
+    /*
+     * Positions of the type-specific columns in a CSV row, matching CsvExporter.HEADER.
+     * Subclasses fill these with List.set, so a column can never be shifted by mistake.
+     */
+    protected static final int CSV_TYPE = 5;
+    protected static final int CSV_FULL_BILL = 6;
+    protected static final int CSV_PEOPLE = 7;
+    protected static final int CSV_ORIGINAL_AMOUNT = 8;
+    protected static final int CSV_CURRENCY = 9;
+    protected static final int CSV_RATE = 10;
+
     /** Marks a line in the storage file as a normal expense. Split expenses use a different tag. */
     private static final String STORAGE_TAG = "E";
 
@@ -176,5 +189,29 @@ public class Expense {
         LocalDate date = DateUtil.parseDate(parts[4]);
 
         return new Expense(description, amount, category, date);
+    }
+
+    /**
+     * Returns the values of this expense's row in a CSV export, in the order of {@code CsvExporter.HEADER}.
+     * A personal expense leaves the type-specific columns empty; subclasses fill their own columns.
+     *
+     * @param index Global 1-based index of this expense, as shown by {@code list}.
+     * @return A new modifiable list of unescaped field values.
+     */
+    public List<String> toCsvFields(int index) {
+        List<String> fields = new ArrayList<>();
+
+        fields.add(String.valueOf(index));
+        fields.add(DateUtil.formatIsoDate(date));
+        fields.add(description);
+        fields.add(category.getDisplayName());
+        fields.add(MoneyUtil.toStorageString(getAmount()));
+        fields.add("Personal");
+
+        // Empty placeholders for the type-specific columns, from CSV_FULL_BILL to CSV_RATE.
+        while (fields.size() <= CSV_RATE) {
+            fields.add("");
+        }
+        return fields;
     }
 }
