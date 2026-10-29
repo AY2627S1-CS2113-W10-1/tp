@@ -37,7 +37,10 @@ Prerequisites: JDK 25 (use the exact version), update Intellij to the most recen
 
 ### I/O redirection tests
 
-* To run _I/O redirection_ tests (aka _Text UI tests_), navigate to the `text-ui-test` and run the `runtest(.bat/.sh)` script.
+* Run `./gradlew test --tests '*TextUiTest'` (`.\gradlew.bat` on Windows) to test the packaged CLI
+  against the checked-in input/output fixtures, including a restart with saved data.
+* These tests also run automatically in `./gradlew check` and the existing GitHub Actions jobs.
+  See [the Text UI test instructions](text-ui-test/README.md) for fixture coverage and maintenance.
 
 ### JUnit tests
 

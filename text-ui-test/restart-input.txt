@@ -1,0 +1,6 @@
+trip list
+rate list
+owe
+budget status m/01-2000
+list trip/ sort/amount order/desc
+exit

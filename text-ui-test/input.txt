@@ -1,0 +1,22 @@
+budget set a/100 m/01-2000
+trip add n/Regression trip s/01-01-2000 e/31-01-2000
+add d/Lunch a/10 c/food dt/02-01-2000
+rate set from/USD to/SGD r/1.25
+add d/Train a/20 cur/USD c/transport dt/03-01-2000
+split d/Dinner a/90 n/3 p/Alice,Bob c/food dt/04-01-2000
+list sort/amount order/asc
+edit 3 a/60 my/20
+owe
+settle p/Alice a/5
+settle p/Bob
+list trip/ c/food
+stats trip/
+budget status m/01-2000
+edit 3 a/10
+delete 1
+add d/Hotel a/40 c/accommodation dt/05-01-2000
+stats compare m/12-1999 m/01-2000
+split list m/01-2000
+trip status
+list
+exit

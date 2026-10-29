@@ -23,7 +23,14 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.14.4'
 }
 
+shadowJar {
+    archiveFileName = 'tripjio.jar'
+}
+
 test {
+    // Exercise the packaged application as part of check, including the existing CI jobs.
+    dependsOn tasks.named('shadowJar')
+    systemProperty 'tripjio.test.jar', tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath
     useJUnitPlatform()
 
     testLogging {
@@ -37,6 +44,8 @@ test {
     }
 }
 
+sourceSets.test.resources.srcDir 'text-ui-test'
+
 application {
     mainClass = 'seedu.tripjio.TripJio'
 }
@@ -46,10 +55,6 @@ jar {
     enabled = false
     // Rename its output anyway; Gradle forbids it clashing with the shadowJar output file, even for a disabled task.
     archiveClassifier = 'without-dependencies'
-}
-
-shadowJar {
-    archiveFileName = 'tripjio.jar'
 }
 
 checkstyle {
