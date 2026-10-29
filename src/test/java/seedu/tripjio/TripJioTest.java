@@ -81,6 +81,52 @@ class TripJioTest {
     }
 
     @Test
+    void run_spendingReaches80PercentOfTripBudget_showsTripBudgetWarning() {
+        String output = run("trip add n/Japan s/01-10-2020 e/10-10-2020",
+                "trip budget a/100",
+                "add d/Train a/85 dt/05-10-2020");
+
+        assertTrue(output.contains("Warning: You have used 80% or more of your budget for trip Japan!"));
+    }
+
+    @Test
+    void run_spendingExceedsTripBudget_showsTripBudgetExceededWarning() {
+        String output = run("trip add n/Japan s/01-10-2020 e/10-10-2020",
+                "trip budget a/100",
+                "add d/Hotel a/120 dt/05-10-2020");
+
+        assertTrue(output.contains("Warning: You have exceeded your budget for trip Japan!"));
+    }
+
+    @Test
+    void run_spendingOutsideTripDates_noTripBudgetWarning() {
+        String output = run("trip add n/Japan s/01-10-2020 e/10-10-2020",
+                "trip budget a/100",
+                "add d/BeforeTrip a/90 dt/20-09-2020");
+
+        assertFalse(output.contains("Warning: You have used 80% or more of your budget for trip Japan!"));
+    }
+
+    @Test
+    void run_editExpenseTriggersTripBudgetWarning() {
+        String output = run("trip add n/Japan s/01-10-2020 e/10-10-2020",
+                "trip budget a/100",
+                "add d/Meal a/10 dt/05-10-2020",
+                "edit 1 a/85");
+
+        assertTrue(output.contains("Warning: You have used 80% or more of your budget for trip Japan!"));
+    }
+
+    @Test
+    void run_splitExpenseTriggersTripBudgetWarning() {
+        String output = run("trip add n/Japan s/01-10-2020 e/10-10-2020",
+                "trip budget a/100",
+                "split d/Dinner a/330 n/3 dt/05-10-2020");
+
+        assertTrue(output.contains("Warning: You have exceeded your budget for trip Japan!"));
+    }
+
+    @Test
     void run_exitCommand_stopsBeforeLaterCommands() throws IOException {
         String output = run("exit", "add d/Lunch a/12.50 dt/15-10-2026");
 

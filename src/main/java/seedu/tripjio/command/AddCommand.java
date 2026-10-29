@@ -43,4 +43,9 @@ public class AddCommand extends Command {
     public YearMonth getAffectedMonth() {
         return expense.getMonth();
     }
+
+    @Override
+    public LocalDate getAffectedDate() {
+        return expense.getDate();
+    }
 }
