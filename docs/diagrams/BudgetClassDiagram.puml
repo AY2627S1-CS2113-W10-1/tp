@@ -11,6 +11,7 @@ skinparam classHeaderBackgroundColor #E3F3EF
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 hide empty members
+hide circle
 
 title Monthly budgets and warnings (class diagram)
 

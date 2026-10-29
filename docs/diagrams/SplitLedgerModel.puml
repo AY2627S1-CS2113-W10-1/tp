@@ -42,9 +42,9 @@ class Settlement {
   -amount: double
 }
 Expense <|-- SplitExpense
-AppState "1" --> "1" ExpenseList : expenses
-ExpenseList "1" --> "0..*" Expense : expenses {ordered}
-AppState "1" --> "0..*" Settlement : settlements {ordered}
+AppState "1" --> "1" ExpenseList : expenses >
+ExpenseList "1" --> "*" Expense : expenses {ordered} >
+AppState "1" --> "*" Settlement : settlements {ordered} >
 note bottom of SplitExpense
   Personal-spending contract:
   inherited amount = full SGD bill;

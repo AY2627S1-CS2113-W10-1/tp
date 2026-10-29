@@ -10,8 +10,6 @@ skinparam NoteBorderColor #BDAA65
 title Forecasting monthly spending
 
 participant "app: TripJio" as App #E8EDF3
-participant "parser: Parser" as Parser #E8EDF3
-participant "fParser: ForecastCommandParser" as FParser #E8EDF3
 participant "command: ForecastCommand" as Cmd #E2EDFC
 participant "state: AppState" as State #E3F3EF
 participant "budget: Budget" as Budget #E3F3EF
@@ -19,16 +17,7 @@ participant "expenses: ExpenseList" as Expenses #E3F3EF
 participant "ui: Ui" as Ui #EFE6F8
 
 activate App
-App -> Parser ++ : parse("forecast m/10-2026")
-Parser -> FParser ++ : parse("m/10-2026")
-create Cmd
-FParser -> Cmd : new ForecastCommand(2026-10)
-activate Cmd
-Cmd --> FParser
-deactivate Cmd
-FParser --> Parser -- : command
-Parser --> App -- : command
-
+note over App, Cmd : Entry: parsing has supplied month and a reference date.\nThis interaction shows the current-month case.
 App -> Cmd ++ : execute(state, ui)
 Cmd -> State ++ : getExpenses()
 State --> Cmd -- : expenses

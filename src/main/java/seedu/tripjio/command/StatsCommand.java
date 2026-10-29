@@ -5,7 +5,7 @@ import seedu.tripjio.model.expense.Category;
 import seedu.tripjio.model.trip.Statistics;
 import seedu.tripjio.ui.Ui;
 import seedu.tripjio.util.DateUtil;
-import seedu.tripjio.util.MoneyUtil;
+import seedu.tripjio.ui.SpendingTable;
 
 import java.time.Clock;
 import java.time.YearMonth;
@@ -42,15 +42,7 @@ public class StatsCommand extends Command {
         YearMonth selectedMonth = month == null ? YearMonth.now(clock) : month;
         Map<Category, Double> totals = Statistics.getMonthlyTotals(state.getExpenses(), selectedMonth);
         ui.showMessage("Spending for " + DateUtil.formatMonth(selectedMonth) + ":");
-        double total = 0;
-        for (Category category : Category.values()) {
-            double amount = totals.get(category);
-            ui.showMessage(category.getDisplayName() + ": " + MoneyUtil.format(amount));
-            total += amount;
-        }
-        ui.showMessage("==============================",
-                "TOTAL SPENT: " + MoneyUtil.format(MoneyUtil.roundToCents(total)),
-                "==============================");
+        ui.showMessage(SpendingTable.format(totals, DateUtil.formatShortMonth(selectedMonth)));
         if (state.getExpenses().getExpensesInMonth(selectedMonth).isEmpty()) {
             ui.showMessage("No expenses recorded for this month.");
         }

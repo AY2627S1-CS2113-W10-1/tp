@@ -68,10 +68,18 @@ class StatsCommandTest {
         state.getExpenses().add(new Expense("After", 500, Category.FOOD, LocalDate.of(2028, 3, 1)));
         state.getExpenses().add(new Expense("Other year", 500, Category.FOOD, LocalDate.of(2027, 2, 1)));
         Parser.parse("stats m/02-2028").execute(state, ui);
-        assertEquals("Spending for February 2028:\nFood: $30.30\nTransport: $12.50\n"
-                + "Accommodation: $0.00\nEntertainment: $0.00\nShopping: $0.00\nOther: $0.00\n"
-                + "==============================\nTOTAL SPENT: $42.80\n"
-                + "==============================\n", output.toString().replace("\r\n", "\n"));
+        assertEquals(String.join("\n",
+                "Spending for February 2028:",
+                "Category               Feb 2028",
+                "-------------------------------",
+                "Food                     $30.30",
+                "Transport                $12.50",
+                "Accommodation             $0.00",
+                "Entertainment             $0.00",
+                "Shopping                  $0.00",
+                "Other                     $0.00",
+                "-------------------------------",
+                "Total                    $42.80", ""), output.toString().replace("\r\n", "\n"));
         assertEquals(7, state.getExpenses().size());
         assertFalse(state.getTrips().hasCurrent());
     }
@@ -81,7 +89,7 @@ class StatsCommandTest {
         Clock clock = Clock.fixed(Instant.parse("2027-01-01T00:00:00Z"), ZoneOffset.UTC);
         new StatsCommand(null, clock).execute(state, ui);
         assertTrue(output.toString().contains("Spending for January 2027:"));
-        assertTrue(output.toString().contains("TOTAL SPENT: $0.00"));
+        assertTrue(output.toString().contains(String.format("%-15s %15s", "Total", "$0.00")));
         assertTrue(output.toString().contains("No expenses recorded for this month."));
         output.reset();
         new StatsCommand(YearMonth.of(2026, 12), clock).execute(state, ui);

@@ -919,7 +919,8 @@ still defaults to the current month. `stats compare` does not accept `trip/`.
 
 Trip statistics starts with `Spending for trip NAME:`, or
 `Spending for trip NAME in MONTH YEAR:` when a month is supplied. All six category
-rows and TOTAL SPENT follow the existing statistics format. An empty intersection
+rows and a separated `Total` row use an aligned two-column table headed `Category`
+and `Amount (SGD)`. An empty intersection
 shows zeros and `No expenses match the selected trip filter.`
 List and split list use their existing empty-filter messages.
 Filtering is read-only, does not assign expenses to trips, and does not change
@@ -950,15 +951,16 @@ Generates a breakdown of your spending across all six categories for a selected 
 * **Expected Output**:
   ```text
   Spending for October 2026:
-  Food: $30.30
-  Transport: $12.50
-  Accommodation: $0.00
-  Entertainment: $0.00
-  Shopping: $0.00
-  Other: $0.00
-  ==============================
-  TOTAL SPENT: $42.80
-  ==============================
+  Category               Oct 2026
+  -------------------------------
+  Food                     $30.30
+  Transport                $12.50
+  Accommodation             $0.00
+  Entertainment             $0.00
+  Shopping                  $0.00
+  Other                     $0.00
+  -------------------------------
+  Total                    $42.80
   ```
 <!-- @@author -->
 
