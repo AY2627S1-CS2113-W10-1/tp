@@ -102,4 +102,9 @@ public class DateUtil {
         return month.format(SHORT_MONTH_DISPLAY);
     }
 
+    /** Returns the date as YYYY-MM-DD, which spreadsheets read correctly in every region. */
+    public static String formatIsoDate(LocalDate date) {
+        return date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+
 }
