@@ -1,8 +1,8 @@
 # About us
 
-Display | Name | GitHub Profile | Portfolio
+Display | Name | Github Profile | Portfolio 
 --------|:----:|:--------------:|:---------:
-![Tran Duc Thien](https://github.com/ducthien-k24.png?size=100) | Tran Duc Thien | [GitHub](https://github.com/ducthien-k24) | [Portfolio](team/ducthien-k24.md)
-![Jeanette Ong](https://github.com/jeanetteong.png?size=100) | Jeanette Ong | [GitHub](https://github.com/jeanetteong) | [Portfolio](team/jeanetteong.md)
-![Titus Chia](https://github.com/teetoozs.png?size=100) | Titus Chia | [GitHub](https://github.com/teetoozs) | [Portfolio](team/teetoozs.md)
-![John Alday](https://github.com/johnalday10.png?size=100) | John Alday | [GitHub](https://github.com/johnalday10) | [Portfolio](team/johnalday10.md)
+![](https://github.com/ducthien-k24.png?size=100) | Tran Duc Thien | [Github](https://github.com/ducthien-k24) | [Portfolio](docs/team/johndoe.md)
+![](https://github.com/jeanetteong.png?size=100) | Jeanette Ong | [Github](https://github.com/jeanetteong) | [Portfolio](docs/team/jeanetteong.md)
+![](https://github.com/teetoozs/100.png?text=Photo) | Titus Chia | [Github](https://github.com/teetoozs) | [Portfolio](docs/team/teetoozs.md)
+![John Alday](https://github.com/johnalday10.png?size=100) | John Alday | [Github](https://github.com/johnalday10) | [Portfolio](team/johnalday10.md)
