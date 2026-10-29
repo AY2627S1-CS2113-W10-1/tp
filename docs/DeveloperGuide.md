@@ -113,26 +113,19 @@ the UI. The architecture does not introduce separate service interfaces or a dat
 
 ### Main loop
 
-The sequence diagram below shows one iteration of the main loop for
-`add d/Lunch a/12.50 c/food`. Other commands follow the same steps; only the
-feature parser and the `Command` subclass differ. To keep the diagram small,
-`Parser` is drawn as a black box (it delegates to `ExpenseCommandParser`), and the
-budget check is a `ref` frame whose details are shown in the
-[budget warning sequence](#monthly-budgets-warnings-and-forecasting).
+The first diagram shows one iteration for `add d/Lunch a/12.50 c/food`.
+`Parser` includes delegation to `ExpenseCommandParser`. The `MonthlyBudgetWarning`
+reference expands into the identically named `sd` interaction immediately below;
+execution resumes at saving when that interaction returns.
 
 <img src="images/AddCommandSequence.svg" alt="Main loop sequence for an add command" width="757">
 
-1. `Ui.readCommand()` returns the trimmed input line. At the end of input it returns
-   `exit`, so the loop always terminates.
-2. `Parser.parse` reads only the command word and hands the rest to the feature
-   parser (`ExpenseCommandParser` here). The feature parser validates every field and
-   creates the command, so an invalid command never reaches execution.
-3. `execute(state, ui)` changes the model and prints the result through `Ui`.
-4. The loop then asks the command three questions: `getAffectedMonth()` (check that
-   month's budget), `isMutating()` (save the file) and `isExit()` (stop the loop).
-   Commands therefore do not need to know about budgets or storage.
-5. `Ui.showLine()` prints a separator after every command, including failed ones,
-   so that successive responses are easy to tell apart.
+<img src="images/BudgetWarningSequence.svg" alt="sd MonthlyBudgetWarning: expansion of the main-loop reference" width="800">
+
+The parser rejects invalid syntax before execution. After successful execution,
+the loop checks the affected month's budget, saves mutating commands and checks
+`isExit()`. Errors skip the remaining steps, but always print a separator.
+At end-of-input, `Ui.readCommand()` returns `exit`.
 
 Adding a new command only requires a `Command` subclass, a feature parser (or a new
 case in an existing one) and one `case` line in `Parser`. The main loop does not change.
@@ -239,7 +232,7 @@ amounts or dates stay in the order they were added.
 **Editing.** The parser leaves every field that is not given as `null`, meaning
 "keep the current value". The sequence diagram shows how `EditCommand` applies them.
 
-<img src="images/EditExpenseSequence.svg" alt="Edit expense sequence" width="554">
+<img src="images/EditExpenseSequence.svg" alt="Personal expense edit and subsequent budget-check reference" width="800">
 
 For ordinary and foreign personal expenses, amount edits dispatch through
 `setAmount`, as illustrated above. Split edits instead combine the proposed bill
@@ -247,9 +240,10 @@ and custom share, then call `SplitExpense.updateAmounts` before changing any oth
 field. `my/` on a non-split is rejected before amount mutation. Both paths validate
 before changing state, so invalid edits leave the record unchanged. The shared-bill
 section below explains the split-specific path and currency units.
-After the edit, `getAffectedMonth()` returns the expense's final month. If the date
-moved the expense out of a month, that month's spending went down, so it does not
-need a new warning.
+After applying edits, `EditCommand` stores `expense.getMonth()` in its
+`affectedMonth` field. The main loop's `MonthlyBudgetWarning` interaction calls
+`getAffectedMonth()` to read that field and check the final month. The old month
+needs no new warning because moving an expense out reduces its spending.
 
 **Deleting.** `DeleteCommand` removes the expense at the index and prints it.
 Later expenses move up by one index, so the user should run `list` again before
@@ -271,39 +265,11 @@ the next `edit` or `delete`.
 
 #### Design considerations
 
-Aspect: How command arguments are read.
-
-- Alternative 1 (current choice): One shared `ArgumentParser` that splits the input by
-  known prefixes.
-  - Pros: Prefixes can be given in any order; repeated, empty and unexpected prefixes
-    are handled the same way in every command.
-  - Cons: A new prefix must be added to the shared pattern, which affects all parsers
-    and needs regression tests.
-- Alternative 2: Each parser splits the input by spaces and reads fixed positions.
-  - Pros: Very simple for short commands.
-  - Cons: Fixed order; descriptions with spaces need quoting; error handling would
-    differ between features.
-
-Aspect: How `list` shows numbers for filtered or sorted results.
-
-- Alternative 1 (current choice): Show each expense's global index.
-  - Pros: The number can be used directly with `edit` and `delete`; the stored order
-    never changes.
-  - Cons: Numbers in a filtered list have gaps, and they change after a deletion.
-- Alternative 2: Number the shown results 1, 2, 3, ... and remember the last view.
-  - Pros: Shorter, continuous numbers.
-  - Cons: `edit` would depend on which `list` ran last, which is easy to get wrong.
-
-Aspect: Where the rules for editing different expense types live.
-
-- Alternative 1 (current choice): Subtypes own validation, with an explicit atomic split-edit path.
-  - Pros: Ordinary/foreign edits use dynamic dispatch; split bill/share changes are validated together in the model.
-  - Cons: `a/` means different things for different types (SGD amount, full bill,
-    original currency), which the User Guide must explain.
-- Alternative 2: Put all subtype validation inside `EditCommand`.
-  - Pros: All edit rules are visible in one place.
-  - Cons: Every new expense type requires changing the command, and the rules would
-    be separated from the data they protect.
+| Decision | Benefit and cost | Alternative considered |
+| --- | --- | --- |
+| Shared prefix parser | Flexible argument order and consistent errors; new prefixes need cross-parser regression tests. | Fixed positions simplify parsing but require quoting descriptions and fixing argument order. |
+| Global indexes in list output | Numbers work directly with edit/delete; filtered views have gaps and deletion shifts indexes. | View-local numbering is continuous but makes edits depend on the last displayed view. |
+| Model-owned validation and atomic split edits | Keeps subtype rules beside the data; amount units still differ by subtype. | Command-owned validation centralises rules but requires command changes for each new expense type. |
 
 #### Tests
 
@@ -317,20 +283,17 @@ loop to check saving, budget warnings and the separator line.
 
 #### Implementation
 
-The monthly budget component comprises command parsing (`BudgetCommandParser`, `ForecastCommandParser`), the domain model (`Budget`),
-command execution (`SetBudgetCommand`, `BudgetStatusCommand`, `ForecastCommand`), and automated post-execution evaluation (`BudgetChecker`).
-
 `BudgetCommandParser` dispatches on the subcommand action word (`set` or `status`):
+
 * `set`: Validates allowed prefixes (`a/` and optional `m/`). Amounts are parsed with `ArgumentParser.parseAmount`
   and validated through `MoneyUtil.validateAmount` (must be $> 0$ and $\le \$1,000,000.00$). The optional month is
   parsed via `DateUtil.parseMonth`.
 * `status`: Validates the optional `m/` prefix.
 
 `Budget` stores an optional default monthly amount (`Double defaultBudget`) and a `TreeMap<YearMonth, Double>`
-of monthly overrides. `getBudgetFor(month)` returns a month's override first, then the default, or `null` when neither
-exists. `null` represents an unset budget, distinct from a zero budget. In storage, the `[budget]` block writes
-`default=AMOUNT` followed by sorted `MM-YYYY=AMOUNT` lines. `TreeMap` guarantees chronological ordering in saved files,
-ensuring deterministic persistence.
+of monthly overrides. `getBudgetFor(month)` returns the override, default, or `null`
+(unset), in that order. The `[budget]` block writes `default=AMOUNT` followed by
+chronologically sorted `MM-YYYY=AMOUNT` lines.
 
 ![Budget class diagram](images/BudgetClassDiagram.svg)
 
@@ -363,7 +326,8 @@ making date-boundary and leap-year tests deterministic.
   * `projected = MoneyUtil.roundToCents((spent / daysPassed) * daysInMonth)`
   * Compares `projected` against `Budget.getBudgetFor(month)`. If projected spending exceeds the budget, it warns of estimated overspending (`Projected to exceed budget by $...`). Otherwise, it reports safe pacing. When no budget exists, it reports projected monthly spending.
 
-Like `BudgetStatusCommand`, `ForecastCommand` provides a secondary constructor `(YearMonth, LocalDate)` allowing deterministic unit tests across date boundaries and leap years.
+Like `BudgetStatusCommand`, `ForecastCommand` accepts a reference date for deterministic tests.
+The sequence starts at `execute`, omitting parsing already illustrated in the main loop.
 
 ![Forecasting monthly spending sequence](images/ForecastSequence.svg)
 
@@ -378,7 +342,8 @@ and queries `ExpenseList.getTotalSpentInMonth(month)`. It then invokes `BudgetCh
 `BudgetChecker` returns a formatted `String` rather than printing directly, maintaining clean separation between the
 model layer and the user interface.
 
-![Monthly budget warning sequence](images/BudgetWarningSequence.svg)
+The complete `MonthlyBudgetWarning` interaction appears alongside its caller in
+[Main loop](#main-loop); it is shared by add, edit and split commands.
 
 #### Example scenario
 

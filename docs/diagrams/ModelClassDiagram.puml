@@ -11,6 +11,7 @@ skinparam NoteBorderColor #BDAA65
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 hide empty members
+hide circle
 title Model component
 class AppState
 class ExpenseList
@@ -31,7 +32,7 @@ AppState *-- "1" ExpenseList
 AppState *-- "1" Budget
 AppState *-- "1" TripBook
 AppState *-- "1" ExchangeRates
-AppState --> "0..*" Settlement : settlements {ordered}
+AppState --> "*" Settlement : settlements {ordered} >
 ExpenseList *-- "*" Expense
 Expense <|-- SplitExpense
 Expense <|-- ForeignExpense
