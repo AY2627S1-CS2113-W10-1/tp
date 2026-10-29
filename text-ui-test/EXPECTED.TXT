@@ -1,0 +1,108 @@
+████████╗██████╗ ██╗██████╗     ██╗██╗ ██████╗
+╚══██╔══╝██╔══██╗██║██╔══██╗    ██║██║██╔═══██╗
+   ██║   ██████╔╝██║██████╔╝    ██║██║██║   ██║
+   ██║   ██╔══██╗██║██╔═══╝██   ██║██║██║   ██║
+   ██║   ██║  ██║██║██║    ╚█████╔╝██║╚██████╔╝
+   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝     ╚════╝ ╚═╝ ╚═════╝
+
+Hello! Welcome to TripJio, your travel budget buddy.
+What would you like to do?
+
+Budget for January 2000 set to $100.00.
+------------------------------------------------------------
+Added and selected trip: Regression trip.
+------------------------------------------------------------
+Added expense:
+  [Food] Lunch - $10.00 (02-01-2000)
+You now have 1 expenses.
+------------------------------------------------------------
+Manual rate saved: 1 USD = 1.25 SGD.
+Existing expenses retain their saved rates.
+------------------------------------------------------------
+Added expense (SGD):
+  [Transport] Train - $25.00 (03-01-2000) [USD 20.00 at 1.25 SGD/USD]
+You now have 2 expenses.
+------------------------------------------------------------
+Got it. I've added this split expense:
+  [Food] Dinner - $30.00 (04-01-2000) (Split among 3)
+Now you have 3 expenses in the list.
+------------------------------------------------------------
+Here are your expenses:
+1. [Food] Lunch - $10.00 (02-01-2000)
+2. [Transport] Train - $25.00 (03-01-2000) [USD 20.00 at 1.25 SGD/USD]
+3. [Food] Dinner - $30.00 (04-01-2000) (Split among 3)
+Total: $65.00
+------------------------------------------------------------
+Edited expense:
+  [Food] Dinner - $20.00 (04-01-2000) (Split among 3)
+------------------------------------------------------------
+=== Debt Ledger ===
+alice owes you: $20.00
+bob owes you: $20.00
+------------------------------------------------------------
+Recorded settlement of $5.00 with alice.
+------------------------------------------------------------
+Recorded settlement of $20.00 with bob.
+------------------------------------------------------------
+Here are your expenses:
+1. [Food] Lunch - $10.00 (02-01-2000)
+3. [Food] Dinner - $20.00 (04-01-2000) (Split among 3)
+Total: $30.00
+------------------------------------------------------------
+Spending for trip Regression trip:
+Category           Amount (SGD)
+-------------------------------
+Food                     $30.00
+Transport                $25.00
+Accommodation             $0.00
+Entertainment             $0.00
+Shopping                  $0.00
+Other                     $0.00
+-------------------------------
+Total                    $55.00
+------------------------------------------------------------
+Budget status for January 2000:
+  Budget: $100.00
+  Spent: $55.00
+  Remaining: $45.00
+------------------------------------------------------------
+Error: Your custom share cannot be more than the total bill.
+------------------------------------------------------------
+Deleted expense:
+  [Food] Lunch - $10.00 (02-01-2000)
+You now have 2 expenses.
+------------------------------------------------------------
+Added expense:
+  [Accommodation] Hotel - $40.00 (05-01-2000)
+You now have 3 expenses.
+Warning: You have used 80% or more of your budget for January 2000! Spent: $85.00 / $100.00 ($15.00 remaining).
+------------------------------------------------------------
+Spending comparison: December 1999 -> January 2000
+Category               Dec 1999        Jan 2000          Change
+---------------------------------------------------------------
+Food                      $0.00          $20.00         +$20.00
+Transport                 $0.00          $25.00         +$25.00
+Accommodation             $0.00          $40.00         +$40.00
+Entertainment             $0.00           $0.00           $0.00
+Shopping                  $0.00           $0.00           $0.00
+Other                     $0.00           $0.00           $0.00
+---------------------------------------------------------------
+Total                     $0.00          $85.00         +$85.00
+------------------------------------------------------------
+Here are your split expenses:
+2. [Food] Dinner - $20.00 (04-01-2000) (Split among 3)
+------------------------------------------------------------
+Trip: 01-01-2000 to 31-01-2000
+Status: Completed
+Duration: 31 day(s)
+Remaining trip days (including today): 0
+Recorded spending during trip: $85.00
+------------------------------------------------------------
+Here are your expenses:
+1. [Transport] Train - $25.00 (03-01-2000) [USD 20.00 at 1.25 SGD/USD]
+2. [Food] Dinner - $20.00 (04-01-2000) (Split among 3)
+3. [Accommodation] Hotel - $40.00 (05-01-2000)
+Total: $85.00
+------------------------------------------------------------
+Bye! Your data has been saved. Safe travels!
+------------------------------------------------------------
