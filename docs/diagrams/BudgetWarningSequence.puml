@@ -6,7 +6,8 @@ skinparam ArrowColor #53657A
 skinparam sequenceLifeLineBackgroundColor #E2EDFC
 skinparam NoteBackgroundColor #FFF8DE
 skinparam NoteBorderColor #BDAA65
-title Monthly budget check after a successful expense command
+mainframe sd MonthlyBudgetWarning
+title Monthly budget check after successful execution
 participant "app: TripJio" as App #E8EDF3
 participant "command: Command" as Cmd #E2EDFC
 participant "expenses: ExpenseList" as Expenses #E3F3EF
@@ -14,8 +15,6 @@ participant "BudgetChecker\n(static)" as Checker #E3F3EF
 participant "budget: Budget" as Budget #E3F3EF
 participant "ui: Ui" as Ui #EFE6F8
 activate App
-App -> Cmd ++ : execute(state, ui)
-Cmd --> App --
 App -> Cmd ++ : getAffectedMonth()
 Cmd --> App -- : month
 opt month is not null
@@ -35,6 +34,6 @@ App -> Ui ++ : showMessage(warning)
 Ui --> App --
 end
 end
-note over App, Ui : Normal mutating-command saving follows.\nAppState getters and internal warning helper are omitted.
+note over App, Ui : Entry: execute has returned successfully.\nAppState getters and internal warning helper are omitted.\nReturn to caller for saving and the separator.
 deactivate App
 @enduml

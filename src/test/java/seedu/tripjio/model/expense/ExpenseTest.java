@@ -3,8 +3,10 @@ package seedu.tripjio.model.expense;
 import org.junit.jupiter.api.Test;
 import seedu.tripjio.exception.TripJioException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -96,5 +98,24 @@ public class ExpenseTest {
 
         expense.setAmount(20);
         assertEquals(20, expense.getAmount());
+    }
+
+    @Test
+    void toCsvFields_personalExpense_returnsCorrectFields() {
+        Expense expense = new Expense("Lunch", 12.5, Category.FOOD, LocalDate.of(2026, 10, 15));
+        List<String> fields = expense.toCsvFields(1);
+
+        // ISO date, two-decimal amount without "$", and the 5 type-specific columns left empty.
+        assertEquals(List.of("1", "2026-10-15", "Lunch", "Food", "12.50", "Personal", "", "", "", "", ""), fields);
+    }
+
+    @Test
+    void toCsvFields_foreignExpense_showsSgdAmountAndOriginalCurrency() throws TripJioException {
+        // EUR 12 at 1.45 SGD/EUR = SGD 17.40, rounded to cents.
+        ForeignExpense ramen = new ForeignExpense("Ramen", 12, Category.FOOD,
+                LocalDate.of(2026, 10, 10), "EUR", new BigDecimal("1.45"));
+
+        assertEquals(List.of("3", "2026-10-10", "Ramen", "Food", "17.40", "Foreign", "", "", "12.00", "EUR", "1.45"),
+                ramen.toCsvFields(3));
     }
 }

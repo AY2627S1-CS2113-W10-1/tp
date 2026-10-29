@@ -42,7 +42,7 @@ Ui --> Cmd
 deactivate Ui
 Cmd --> App
 deactivate Cmd
-ref over App, Expenses : check budget of c.getAffectedMonth()
+ref over App, Expenses : MonthlyBudgetWarning
 opt c.isMutating()
 App -> Storage : save(state)
 activate Storage

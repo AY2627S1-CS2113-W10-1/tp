@@ -15,6 +15,7 @@ skinparam sequenceGroupBackgroundColor #F4F6F9
 skinparam shadowing false
 skinparam classAttributeIconSize 0
 hide empty members
+hide circle
 title Trip management and reporting (partial class diagram)
 class AppState {
   +getTrips(): TripBook
@@ -52,16 +53,16 @@ class Statistics {
   +{static} getCategoryTotals(expenses): Map
 }
 class Storage #FBE7D5
-AppState "1" --> "1" TripBook : trips
-AppState --> ExpenseList : expenses
-TripBook "1" --> "*" Trip : trips
+AppState "1" --> "1" TripBook : trips >
+AppState --> ExpenseList : expenses >
+TripBook "1" --> "*" Trip : trips >
 ExpenseList --> "*" Expense
 Expense <|-- SplitExpense
 Expense <|-- ForeignExpense
 ExpenseFilter ..> AppState
 ExpenseFilter ..> ExpenseList
-Statistics ..> Expense : getAmount()
-Storage ..> TripBook : loads / serialises
+Statistics ..> Expense : getAmount() >
+Storage ..> TripBook : loads / serialises >
 note bottom of TripBook
   Names and trips use matching list positions.
   selected = -1 means no current trip.

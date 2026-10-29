@@ -2,6 +2,7 @@ package seedu.tripjio.model.trip;
 
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
+import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -27,6 +28,9 @@ public class Trip {
 
     /** Last day of the trip, or null if no trip has been set. */
     private LocalDate end;
+
+    /** Budget allocated for this trip, or null if not set. */
+    private Double budget;
 
     /**
      * Sets the dates of the trip, replacing any trip already set.
@@ -63,6 +67,25 @@ public class Trip {
 
     public LocalDate getEnd() {
         return end;
+    }
+
+    /**
+     * Sets the budget for this trip.
+     *
+     * @param amount Budget amount.
+     * @throws TripJioException If the amount is out of range.
+     */
+    public void setBudget(double amount) throws TripJioException {
+        MoneyUtil.validateAmount(amount);
+        this.budget = amount;
+    }
+
+    public Double getBudget() {
+        return budget;
+    }
+
+    public boolean hasBudget() {
+        return budget != null;
     }
 
     /** Returns whether a date falls within this complete trip, including both endpoints. */

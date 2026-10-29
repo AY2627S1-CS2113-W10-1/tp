@@ -50,15 +50,16 @@ Here are your expenses:
 Total: $30.00
 ------------------------------------------------------------
 Spending for trip Regression trip:
-Food: $30.00
-Transport: $25.00
-Accommodation: $0.00
-Entertainment: $0.00
-Shopping: $0.00
-Other: $0.00
-==============================
-TOTAL SPENT: $55.00
-==============================
+Category           Amount (SGD)
+-------------------------------
+Food                     $30.00
+Transport                $25.00
+Accommodation             $0.00
+Entertainment             $0.00
+Shopping                  $0.00
+Other                     $0.00
+-------------------------------
+Total                    $55.00
 ------------------------------------------------------------
 Budget status for January 2000:
   Budget: $100.00

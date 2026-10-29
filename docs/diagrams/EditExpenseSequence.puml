@@ -10,7 +10,7 @@ skinparam sequenceParticipantBorderColor #60758A
 skinparam sequenceLifeLineBorderColor #A5B1BE
 skinparam sequenceGroupBorderColor #8D9BAD
 skinparam sequenceGroupBackgroundColor #F4F6F9
-title Executing "edit 3 a/120 c/food"
+title Editing a personal expense: "edit 3 a/120 c/food"
 participant "app: TripJio" as App #E8EDF3
 participant "c: EditCommand" as Cmd #E2EDFC
 participant "expenses:\nExpenseList" as List #E3F3EF
@@ -43,14 +43,16 @@ deactivate Exp
 end
 Cmd -> Exp : getMonth()
 activate Exp
-Exp --> Cmd : affectedMonth
+Exp --> Cmd : month
 deactivate Exp
+note right of Cmd : Store month in c.affectedMonth.\nThis is the date after any edit.
 Cmd -> Ui : showMessage(...)
 activate Ui
 Ui --> Cmd
 deactivate Ui
 Cmd --> App
 deactivate Cmd
-note over App : then budget\ncheck and save
+ref over App, Ui : MonthlyBudgetWarning
+note over App, Cmd : The referenced interaction calls c.getAffectedMonth(),\nwhich returns the stored month; saving follows.
 deactivate App
 @enduml

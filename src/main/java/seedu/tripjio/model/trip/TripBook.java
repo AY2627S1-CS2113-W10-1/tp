@@ -2,6 +2,7 @@ package seedu.tripjio.model.trip;
 
 import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.util.DateUtil;
+import seedu.tripjio.util.MoneyUtil;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -142,8 +143,12 @@ public class TripBook {
         List<String> lines = new ArrayList<>();
         for (int i = 0; i < trips.size(); i++) {
             Trip trip = trips.get(i);
-            lines.add("T|" + names.get(i) + "|" + DateUtil.formatDate(trip.getStart())
-                    + "|" + DateUtil.formatDate(trip.getEnd()));
+            String line = "T|" + names.get(i) + "|" + DateUtil.formatDate(trip.getStart())
+                    + "|" + DateUtil.formatDate(trip.getEnd());
+            if (trip.hasBudget()) {
+                line += "|" + MoneyUtil.toStorageString(trip.getBudget());
+            }
+            lines.add(line);
         }
         if (hasCurrent()) {
             lines.add("A|" + names.get(selected));
@@ -154,10 +159,23 @@ public class TripBook {
     /** Restores a named trip or selection from the ordered format written by this class. */
     public void loadStorageLine(String line) throws TripJioException {
         String[] fields = line.split("\\|", -1);
-        if (fields.length == 4 && fields[0].equals("T")) {
+        if ((fields.length == 4 || fields.length == 5) && fields[0].equals("T")) {
             validateName(fields[1]);
             Trip trip = new Trip();
             trip.set(DateUtil.parseDate(fields[2]), DateUtil.parseDate(fields[3]));
+            if (fields.length == 5) {
+                try {
+                    String budgetStr = fields[4].trim();
+                    int dot = budgetStr.indexOf('.');
+                    if (dot >= 0 && budgetStr.length() - dot - 1 > 2) {
+                        throw new TripJioException("Budget must have at most 2 decimal places.");
+                    }
+                    double budget = Double.parseDouble(budgetStr);
+                    trip.setBudget(budget);
+                } catch (TripJioException | NumberFormatException e) {
+                    throw new TripJioException("Invalid budget in trip line: " + line);
+                }
+            }
             names.add(fields[1].trim());
             trips.add(trip);
         } else if (fields.length == 2 && fields[0].equals("A")) {
