@@ -29,7 +29,7 @@ public class HelpCommand extends Command {
         "trip delete INDEX",
         "trip budget a/AMOUNT",
         "trip summary",
-        "forecast [m/month]",
+        "forecast [m/MONTH]",
         "rate set from/CURRENCY to/SGD r/RATE",
         "rate list",
         "Amounts and reports use SGD; rates are manual, not live.",
