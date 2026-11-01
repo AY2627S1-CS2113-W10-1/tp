@@ -112,7 +112,12 @@ public class Storage {
                     String[] parts = line.split("\\|", -1);
                     if (parts.length == 2) {
                         String person = SplitExpense.parsePerson(parts[0]);
-                        double amount = Double.parseDouble(parts[1]);
+                        double amount;
+                        try {
+                            amount = Double.parseDouble(parts[1]);
+                        } catch (NumberFormatException e) {
+                            throw new TripJioException("Invalid owe amount: " + line);
+                        }
                         if (!Double.isFinite(amount) || amount == 0) {
                             throw new TripJioException("Settlement must be a finite non-zero amount.");
                         }
