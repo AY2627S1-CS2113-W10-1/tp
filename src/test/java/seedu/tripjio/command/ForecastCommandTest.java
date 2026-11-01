@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ForecastCommandTest {
 
@@ -81,7 +82,7 @@ class ForecastCommandTest {
     }
 
     @Test
-    void execute_currentMonthNoBudget_showsNoBudgetSet() {
+    void execute_currentMonthNoBudget_showsNoBudgetSet() throws TripJioException {
         LocalDate today = LocalDate.of(2026, 10, 10);
         YearMonth oct2026 = YearMonth.of(2026, 10);
 
@@ -100,16 +101,15 @@ class ForecastCommandTest {
     }
 
     @Test
-    void execute_futureMonth_showsCannotForecast() {
+    void execute_futureMonth_throwsTripJioException() {
         LocalDate today = LocalDate.of(2026, 10, 10);
         YearMonth nov2026 = YearMonth.of(2026, 11);
 
         ForecastCommand command = new ForecastCommand(nov2026, today);
-        command.execute(state, ui);
+        TripJioException exception = assertThrows(TripJioException.class, () -> command.execute(state, ui));
 
-        String expected = "Cannot forecast for a future month (November 2026) because no days have passed yet."
-                + System.lineSeparator();
-        assertEquals(expected, output.toString());
+        assertEquals("Cannot forecast for a future month (November 2026) because no days have passed yet.",
+                exception.getMessage());
     }
 
     @Test
