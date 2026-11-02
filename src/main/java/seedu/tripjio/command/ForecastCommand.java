@@ -1,5 +1,6 @@
 package seedu.tripjio.command;
 
+import seedu.tripjio.exception.TripJioException;
 import seedu.tripjio.model.AppState;
 import seedu.tripjio.ui.Ui;
 import seedu.tripjio.util.DateUtil;
@@ -47,13 +48,12 @@ public class ForecastCommand extends Command {
     }
 
     @Override
-    public void execute(AppState state, Ui ui) {
+    public void execute(AppState state, Ui ui) throws TripJioException {
         YearMonth currentMonth = YearMonth.from(today);
 
         if (month.isAfter(currentMonth)) {
-            ui.showMessage("Cannot forecast for a future month (" + DateUtil.formatMonth(month)
+            throw new TripJioException("Cannot forecast for a future month (" + DateUtil.formatMonth(month)
                     + ") because no days have passed yet.");
-            return;
         }
 
         double spentSoFar = state.getExpenses().getTotalSpentInMonth(month);
