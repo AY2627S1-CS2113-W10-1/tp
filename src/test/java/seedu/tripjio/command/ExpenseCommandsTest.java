@@ -55,7 +55,7 @@ class ExpenseCommandsTest {
         command.execute(state, ui);
 
         assertEquals(1, state.getExpenses().size());
-        assertEquals("Added expense:\n  [Transport] Metro card - $45.00 (02-10-2026)\nYou now have 1 expenses.\n",
+        assertEquals("Added expense:\n  [Transport] Metro card - $45.00 (02-10-2026)\nYou now have 1 expense.\n",
                 getOutput());
         assertTrue(command.isMutating());
         assertEquals(YearMonth.of(2026, 10), command.getAffectedMonth());

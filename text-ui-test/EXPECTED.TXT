@@ -14,7 +14,7 @@ Added and selected trip: Regression trip.
 ------------------------------------------------------------
 Added expense:
   [Food] Lunch - $10.00 (02-01-2000)
-You now have 1 expenses.
+You now have 1 expense.
 ------------------------------------------------------------
 Manual rate saved: 1 USD = 1.25 SGD.
 Existing expenses retain their saved rates.

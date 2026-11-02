@@ -30,7 +30,7 @@ public class DeleteCommand extends Command {
         Expense removed = state.getExpenses().delete(index);
         ui.showMessage("Deleted expense:",
                 "  " + removed,
-                "You now have " + state.getExpenses().size() + " expenses.");
+                "You now have " + state.getExpenses().describeSize() + ".");
     }
 
     @Override

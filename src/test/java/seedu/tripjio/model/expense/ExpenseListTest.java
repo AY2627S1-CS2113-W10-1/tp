@@ -43,6 +43,16 @@ class ExpenseListTest {
     }
 
     @Test
+    void describeSize_oneOrMany_correctNoun() {
+        ExpenseList list = new ExpenseList();
+        assertEquals("0 expenses", list.describeSize());
+        list.add(expense(12, 2026, 10, 16));
+        assertEquals("1 expense", list.describeSize());
+        list.add(expense(30, 2026, 10, 20));
+        assertEquals("2 expenses", list.describeSize());
+    }
+
+    @Test
     void get_validIndex_oneBased() throws TripJioException {
         Expense first = expense(12, 2026, 10, 16);
         Expense second = expense(50, 2026, 10, 22);
