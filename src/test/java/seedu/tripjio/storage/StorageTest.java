@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Checks storage round trips and recovery from malformed records without losing valid data. */
 class StorageTest {
     /** JUnit creates a new empty folder for each test and deletes it afterwards. */
     @TempDir
@@ -101,6 +102,33 @@ class StorageTest {
         assertTrue(warnings.contains("Skipped invalid line 1 "));
         assertTrue(warnings.contains("Skipped invalid line 4 "));
         assertTrue(warnings.contains("Skipped invalid line 5 "));
+    }
+
+    @Test
+    void load_invalidOweAmounts_reportsReadableWarningsAndLoadsOtherRecords() throws IOException {
+        Path file = tempDir.resolve("tripjio.txt");
+        Files.write(file, List.of(
+                "[owe]",
+                "Bob|zz",
+                "Alice|12.50",
+                "Carol|",
+                "Dave|-4.25",
+                "[expense]",
+                "E|Lunch|5.00|FOOD|01-01-2000"
+        ), StandardCharsets.UTF_8);
+
+        AppState state = storageAt(file).load(ui);
+
+        String warnings = output.toString();
+        assertEquals("Error: Skipped invalid line 2 in data file: Invalid owe amount: Bob|zz\n"
+                + "Error: Skipped invalid line 4 in data file: Invalid owe amount: Carol|\n",
+                warnings.replace("\r\n", "\n"));
+        assertEquals(2, state.getSettlements().size());
+        assertEquals("alice", state.getSettlements().get(0).getPerson());
+        assertEquals(12.50, state.getSettlements().get(0).getAmount());
+        assertEquals("dave", state.getSettlements().get(1).getPerson());
+        assertEquals(-4.25, state.getSettlements().get(1).getAmount());
+        assertEquals(1, state.getExpenses().size());
     }
 
     @Test
