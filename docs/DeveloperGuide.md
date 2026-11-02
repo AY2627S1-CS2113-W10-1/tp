@@ -127,6 +127,11 @@ the loop checks the affected month's budget, saves mutating commands and checks
 `isExit()`. Errors skip the remaining steps, but always print a separator.
 At end-of-input, `Ui.readCommand()` returns `exit`.
 
+`Ui.hasInputEnded()` distinguishes EOF from an explicit exit command. `ExitCommand`
+requests a final save but does not announce success itself. After saving, the main
+loop prints goodbye. A failed explicit exit leaves the session open for retry;
+a failed EOF exit warns of unsaved data and terminates, preventing an infinite loop.
+
 Adding a new command only requires a `Command` subclass, a feature parser (or a new
 case in an existing one) and one `case` line in `Parser`. The main loop does not change.
 
@@ -1003,6 +1008,12 @@ The feature reuses existing parts of the architecture wherever possible:
   ```
 
   For example, `Ramen, "large"` becomes `"Ramen, ""large"""`.
+  Before CSV quoting, `escape` prefixes an apostrophe when the first non-whitespace
+  character is `=`, `+`, `-` or `@`. This prevents descriptions being exported as
+  formula-like cells; it does not change the stored expense. Normal numeric amount
+  and ISO date fields remain unchanged. Importers may display the apostrophe, so the
+  UG also recommends importing descriptions as text. CSV quoting alone is not a
+  formula-safety measure.
   `write(path, lines)` creates the `data` folder
   if needed and writes UTF-8 with a byte-order mark (BOM). An `IOException` is turned
   into a `TripJioException`, so the main loop shows an error and continues.

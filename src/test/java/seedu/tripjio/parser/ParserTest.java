@@ -16,6 +16,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ParserTest {
 
     @Test
+    void parse_mixedCaseSplitList_returnsListCommand() throws TripJioException {
+        assertInstanceOf(seedu.tripjio.command.SplitListCommand.class, Parser.parse("SPLIT LIST"));
+        assertInstanceOf(seedu.tripjio.command.SplitListCommand.class, Parser.parse("split LiSt m/10-2026"));
+        assertThrows(TripJioException.class, () -> Parser.parse("split LIST invalid"));
+    }
+
+    @Test
     void parse_help_returnsHelpCommand() throws TripJioException {
         assertInstanceOf(HelpCommand.class, Parser.parse("help"));
     }

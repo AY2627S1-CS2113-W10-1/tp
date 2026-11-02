@@ -22,6 +22,24 @@ class CsvExporterTest {
     @TempDir
     Path tempDir;
 
+    @Test
+    void escape_formulaLikeText_neutralizedBeforeCsvQuoting() {
+        for (String field : List.of("=1+1", "+1+1", "-1+1", "@SUM(A1)", "  =1", "\t=1")) {
+            assertEquals("'" + field, CsvExporter.escape(field));
+        }
+        assertEquals("\"'=SUM(1,2)\"", CsvExporter.escape("=SUM(1,2)"));
+        assertEquals("12.50", CsvExporter.escape("12.50"));
+        assertEquals("2026-10-01", CsvExporter.escape("2026-10-01"));
+    }
+
+    @Test
+    void toCsvLines_formulaDescription_doesNotChangeExpense() {
+        Expense item = expense("=1+1", 12.5, 1);
+        List<String> lines = CsvExporter.toCsvLines(List.of(item), List.of(item));
+        assertTrue(lines.get(1).contains(",'=1+1,"));
+        assertTrue(lines.get(1).contains(",12.50,"));
+        assertEquals("=1+1", item.getDescription());
+    }
     private static Expense expense(String description, double amount, int day) {
         return new Expense(description, amount, Category.FOOD, LocalDate.of(2026, 10, day));
     }

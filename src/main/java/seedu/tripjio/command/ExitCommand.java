@@ -4,14 +4,14 @@ import seedu.tripjio.model.AppState;
 import seedu.tripjio.ui.Ui;
 
 /**
- * Shows the goodbye message and ends the application.
+ * Requests application exit; the main loop prints goodbye only after saving successfully.
  * It is marked as mutating so that the main loop saves the data one last time before exiting.
  */
 public class ExitCommand extends Command {
 
     @Override
     public void execute(AppState state, Ui ui) {
-        ui.showGoodbye();
+        // Saving and the success message belong to the main loop, which owns persistence.
     }
 
     @Override

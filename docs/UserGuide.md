@@ -1057,6 +1057,12 @@ Index,Date,Description,Category,Amount (SGD),Type,Full bill (SGD),People,Origina
 
 A description that contains a comma or a double quote is wrapped in double quotes in the file (e.g. `"Ramen, large"`), so it stays in one column.
 
+Descriptions starting with `=`, `+`, `-` or `@` (ignoring leading whitespace)
+receive a leading apostrophe in the exported CSV to prevent formula interpretation.
+The apostrophe may be visible depending on the spreadsheet's import settings.
+The original description in TripJio is unchanged; numeric amounts remain numeric.
+When importing CSV files, choose text for the Description column and do not enable formulas.
+
 If no expense matches the filters (or you have no expenses):
 
 ```
@@ -1068,6 +1074,11 @@ No expenses match the given filter. Nothing was exported.
 ### Exiting the program: `exit`
 
 Saves your data and exits TripJio.
+
+The success message appears only after saving succeeds. If saving fails, TripJio
+shows an error and stays open so you can fix the data file location or permissions
+and retry `exit`. If terminal input ends while saving still fails, it reports that
+unsaved changes will be lost and terminates instead of repeatedly retrying.
 
 Format: `exit`
 

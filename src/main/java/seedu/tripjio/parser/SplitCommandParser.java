@@ -25,7 +25,7 @@ public class SplitCommandParser {
     public static Command parse(String args) throws TripJioException {
         ArgumentParser p = new ArgumentParser(args);
 
-        if ("list".equals(p.getPreamble())) {
+        if ("list".equalsIgnoreCase(p.getPreamble())) {
             p.checkAllowedPrefixes("m", "trip");
             String monthText = p.getOptional("m");
             YearMonth month = (monthText == null) ? null : DateUtil.parseMonth(monthText);

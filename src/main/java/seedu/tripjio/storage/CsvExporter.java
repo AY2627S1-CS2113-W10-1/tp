@@ -26,8 +26,14 @@ public class CsvExporter {
     /**
      * Escapes one field by the RFC 4180 rule: a field containing a comma, double quote or line break
      * is wrapped in double quotes, and each double quote inside it is doubled.
+     * Formula-like fields receive a leading apostrophe before escaping so spreadsheet imports
+     * treat them as text. Leading whitespace is ignored when checking the formula marker.
      */
     public static String escape(String field) {
+        String trimmed = field.stripLeading();
+        if (!trimmed.isEmpty() && "=+-@".indexOf(trimmed.charAt(0)) >= 0) {
+            field = "'" + field;
+        }
         if (field.contains(",") || field.contains("\"")
                 || field.contains("\n") || field.contains("\r")) {
             return "\"" + field.replace("\"", "\"\"") + "\"";
