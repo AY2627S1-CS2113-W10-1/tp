@@ -31,6 +31,9 @@ public class ArgumentParser {
     /** A positive number with at most 2 decimal places, e.g. "12" or "12.50". */
     private static final Pattern AMOUNT_FORMAT = Pattern.compile("^\\d+(\\.\\d{1,2})?$");
 
+    private static final String INVALID_AMOUNT_MESSAGE =
+            "Amount must be a positive number with at most 2 decimal places.";
+
     /** A whole number made only of digits, e.g. "3". Signs such as "+3" or "-1" are rejected. */
     private static final Pattern INDEX_FORMAT = Pattern.compile("^\\d+$");
 
@@ -176,8 +179,9 @@ public class ArgumentParser {
 
     /** Parses a positive two-decimal amount; its SGD cap is checked after currency conversion. */
     public static double parseOriginalAmount(String text) throws TripJioException {
-        if (!AMOUNT_FORMAT.matcher(text).matches()) {
-            throw new TripJioException("Amount must be a positive number with at most 2 decimal places.");
+        // "0" and "0.00" match the format, so they are also checked here to give the same message as "-5".
+        if (!AMOUNT_FORMAT.matcher(text).matches() || Double.parseDouble(text) <= 0) {
+            throw new TripJioException(INVALID_AMOUNT_MESSAGE);
         }
         double amount = Double.parseDouble(text);
         MoneyUtil.validateOriginalAmount(amount);

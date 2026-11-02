@@ -34,7 +34,7 @@ public class AddForeignExpenseCommand extends Command {
                 state.getExchangeRates().get(currency));
         state.getExpenses().add(expense);
         ui.showMessage("Added expense (SGD):", "  " + expense,
-                "You now have " + state.getExpenses().size() + " expenses.");
+                "You now have " + state.getExpenses().describeSize() + ".");
     }
 
     @Override

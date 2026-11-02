@@ -47,6 +47,14 @@ public class ExpenseList {
         return expenses.size();
     }
 
+    /**
+     * Returns the number of expenses with the correct singular or plural noun,
+     * e.g. "1 expense" or "3 expenses".
+     */
+    public String describeSize() {
+        return expenses.size() + (expenses.size() == 1 ? " expense" : " expenses");
+    }
+
     public boolean isEmpty(){
         return expenses.isEmpty();
     }
@@ -141,7 +149,7 @@ public class ExpenseList {
         if (index < 1 || index > expenses.size()) {
             throw new TripJioException(
                     "Invalid index: " + index
-                            + ". You have " + expenses.size() + " expenses."
+                            + ". You have " + describeSize() + "."
             );
         }
     }

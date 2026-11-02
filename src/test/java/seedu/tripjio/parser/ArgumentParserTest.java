@@ -123,6 +123,16 @@ class ArgumentParserTest {
     }
 
     @Test
+    void parseAmount_zeroOrNegative_sameMessage() {
+        String expected = "Amount must be a positive number with at most 2 decimal places.";
+        for (String text : new String[] {"0", "0.00", "-3"}) {
+            TripJioException exception = assertThrows(TripJioException.class,
+                    () -> ArgumentParser.parseAmount(text), "Input: " + text);
+            assertEquals(expected, exception.getMessage(), "Input: " + text);
+        }
+    }
+
+    @Test
     void parseIndex_valid_parsed() throws TripJioException {
         assertEquals(3, ArgumentParser.parseIndex("3"));
     }
