@@ -15,6 +15,8 @@ public class Ui {
 
     private final PrintStream out;
 
+    private boolean inputEnded;
+
 
     /**
      * Creates a Ui that reads from standard input and writes to standard output.
@@ -44,7 +46,13 @@ public class Ui {
         if (in.hasNextLine()) {
             return in.nextLine().trim();
         }
+        inputEnded = true;
         return "exit";
+    }
+
+    /** Returns whether the most recent read reached EOF, so failed saving cannot cause an exit loop. */
+    public boolean hasInputEnded() {
+        return inputEnded;
     }
 
     /**

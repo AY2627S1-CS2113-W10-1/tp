@@ -27,6 +27,28 @@ class TripJioTest {
 
     private Path dataFile;
 
+    @Test
+    @org.junit.jupiter.api.Timeout(5)
+    void run_saveFailureAtEof_terminatesWithoutFalseSuccess() throws IOException {
+        Files.createDirectory(tempDir.resolve("tripjio.txt"));
+        String output = run("add d/Test a/10", "exit", "list");
+        assertTrue(output.contains("Could not save data"));
+        assertTrue(output.contains("Not exiting: data could not be saved"));
+        assertTrue(output.contains("Here are your expenses:"));
+        assertTrue(output.contains("Input ended. Exiting without saving"));
+        assertFalse(output.contains("Your data has been saved"));
+        assertEquals(4, countLines(output, DIVIDER));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Timeout(5)
+    void run_emptyInputAndSaveFailure_terminatesAfterOneAttempt() throws IOException {
+        Files.createDirectory(tempDir.resolve("tripjio.txt"));
+        String output = run();
+        assertTrue(output.contains("Input ended. Exiting without saving"));
+        assertFalse(output.contains("Your data has been saved"));
+        assertEquals(1, countLines(output, DIVIDER));
+    }
     /**
      * Runs TripJio on the given input lines and returns everything it printed.
      * When the input runs out, readCommand returns "exit", so the loop always ends.

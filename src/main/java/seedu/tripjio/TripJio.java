@@ -67,9 +67,11 @@ public class TripJio {
 
         while (!isExit) {
             String input = ui.readCommand();
+            boolean exitRequested = false;
             try {
                 Command command = Parser.parse(input);
                 assert command != null : "Parser must return a command or throw";
+                exitRequested = command.isExit();
 
                 logger.fine(() -> "Executing " + command.getClass().getSimpleName());
 
@@ -80,10 +82,22 @@ public class TripJio {
                 if (command.isMutating()) {
                     storage.save(state);
                 }
-                isExit = command.isExit();
+                isExit = exitRequested;
+                if (isExit) {
+                    ui.showGoodbye();
+                }
             } catch (TripJioException e) {
                 logger.info("Command failed: " + e.getMessage());
                 ui.showError(e.getMessage());
+                if (exitRequested) {
+                    if (ui.hasInputEnded()) {
+                        ui.showError("Input ended. Exiting without saving; unsaved changes will be lost.");
+                        isExit = true;
+                    } else {
+                        ui.showMessage("Not exiting: data could not be saved. Fix the data file location "
+                                + "and permissions, then retry exit.");
+                    }
+                }
             }
             ui.showLine();
         }
