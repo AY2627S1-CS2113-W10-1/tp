@@ -181,6 +181,10 @@ uses Gradle, JUnit Jupiter, Checkstyle and the Shadow Gradle plugin as declared 
 `build.gradle`. Contributors should add attribution here when introducing other
 reused code, assets or documentation.
 
+**Use of AI tools**
+
+- Tran Duc Thien used Claude (Anthropic) throughout the project to clarify programming syntax, troubleshoot compiler errors, suggest design improvements, refine wording in documentation, review written code, assist with repetitive coding tasks, verify diagrams, and identify bugs during testing before merging pull requests. All AI-generated suggestions and outputs were carefully reviewed, tested, and adapted before being incorporated into the project.
+
 ## Design & implementation
 
 Each enhancement below describes its implementation, an example scenario, and the
