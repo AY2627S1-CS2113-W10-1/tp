@@ -17,95 +17,69 @@ the User Guide and the architecture sections of the Developer Guide.
 
 ### Code contributed
 
-[RepoSense link](https://nus-cs2113-ay2627s1.github.io/tp-dashboard/?search=ducthien-k24&breakdown=true)
+[RepoSense link](https://nus-cs2113-ay2627-s1.github.io/tp-dashboard/?search=ducthien-k24&breakdown=true)
 
 ### Enhancements implemented
 
 - **Base structure and expense tracking**
-  ([PR #7](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/7))
-  - Designed the `Ui → Parser → Command → Model` architecture with `Storage`, so that
-    each feature only adds its own parser and `Command` subclasses. The main loop
-    asks each command whether its month needs a budget check (`getAffectedMonth()`),
-    whether data must be saved (`isMutating()`) and whether to exit, so commands never
-    deal with budgets or storage themselves.
-  - Wrote the shared `ArgumentParser` (prefixes in any order; repeated, empty and
-    unexpected prefixes rejected the same way in every command), the sectioned text
-    `Storage` that skips corrupt lines with a warning instead of losing the whole
-    file, and the `MoneyUtil`/`DateUtil` helpers used across all features.
+  ([PR #7](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/7),
+  [PR #16](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/16))
+  - Designed the `Ui → Parser → Command → Model` architecture with `Storage`. Each
+    feature only adds its own parser and `Command` subclasses; the main loop handles
+    budget checks, saving and exit, so commands never deal with storage themselves.
+  - Wrote the shared `ArgumentParser` (prefixes in any order, invalid prefixes rejected
+    the same way in every command), a sectioned `Storage` that skips corrupt lines
+    instead of losing the whole file, and the `MoneyUtil`/`DateUtil` helpers.
   - Implemented `add`, `list`, `edit` and `delete`. `list` keeps each expense's global
-    index under filters and sorting, so the number shown can be used directly with
-    `edit` and `delete`.
+    index under filters and sorting, so it can be used directly with `edit`/`delete`.
+  - Tested the main loop, storage, expenses and helpers, including non-English locales.
 - **Export to CSV** ([PR #60](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/60))
   - `export [c/CATEGORY] [m/MONTH] [trip/]` writes the expenses that `list` would show
-    to `data/export.csv` for Excel, Numbers or Google Sheets, reusing the shared
-    `ExpenseFilter`.
-  - Each expense type builds its own row through an overridden `toCsvFields`, like
-    `toStorageString`, so the exporter needs no `instanceof` checks. Column positions
-    are named constants, so a subclass cannot write into the wrong column.
-  - Fields are escaped by the RFC 4180 rule, dates use ISO format so every spreadsheet
-    region reads them correctly, and the file is UTF-8 with a byte-order mark so
-    descriptions such as `Phở` display correctly in Excel.
-- **Usability improvements**
+    to a CSV file for Excel, Numbers or Google Sheets.
+  - Each expense type builds its own row through an overridden `toCsvFields`, so the
+    exporter needs no `instanceof` checks; column positions are named constants.
+  - Fields are escaped by RFC 4180, dates use ISO format, and the file is UTF-8 with a
+    byte-order mark so descriptions such as `Phở` display correctly in Excel.
+- **Usability, assertions and logging**
   ([PR #14](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/14),
-  [PR #55](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/55))
-  - Added a separator line after every command, including failed ones, so successive
-    responses are easy to tell apart.
-  - Reworked `stats compare` into an aligned table that stays aligned even for the
-    largest possible totals.
-  - Made `settle` amounts use the same money format as the rest of the app.
-- **Assertions and logging**
-  ([PR #56](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/56))
-  - Enabled assertions for `gradle run` and logged key events (data loaded, each
-    command executed, failed commands, skipped corrupt lines, failed saves) to
-    `data/tripjio.log`, so logs never mix with the command output.
-- **Tests** ([PR #16](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/16),
-  [PR #60](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/60))
-  - Added tests for the main loop (saving, budget warnings, separator, exit), storage
-    round trips and invalid lines, `Expense`, `ExpenseList`, `MoneyUtil` (including
-    non-English locales) and `DateUtil`.
-  - Added tests for every part of export: CSV escaping, rows of each expense type,
-    filters with global indexes, and parsing of valid and invalid arguments.
+  [PR #55](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/55),
+  [PR #56](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/56),
+  [PR #70](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/70))
+  - Added a separator after every command, an aligned `stats compare` table and
+    consistent money formats and error messages.
+  - Enabled assertions and logged key events to `data/tripjio.log`, separate from the
+    command output.
 
 ### Contributions to the User Guide
 
-- Restructured the whole guide for v2.0
-  ([PR #18](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/18)): table of contents,
-  command format notes with a parameter table, features grouped by area, FAQ, Known
-  Issues and a complete command summary. Kept teammates' authorship of moved sections
-  with `@@author` tags ([PR #25](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/25)).
-- Wrote the sections for `help`, `add`, `list`, `edit`, `delete`, `stats compare`,
-  `export`, `exit`, saving and editing the data file.
+- Restructured the guide ([PR #18](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/18)):
+  table of contents, command format notes, features grouped by area, FAQ, Known Issues
+  and command summary, keeping teammates' authorship with `@@author` tags.
+- Wrote `help`, `add`, `list`, `edit`, `delete`, `stats compare`, `export`, `exit` and
+  the data file sections.
 
 ### Contributions to the Developer Guide
 
-- Wrote the Architecture, Main loop, Model component and Expense management sections
-  ([PR #19](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/19)), and the Export to
-  CSV section, first as a proposed design and later updated to the implementation
-  ([PR #60](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/60)).
-- Drew the diagrams for these sections: architecture diagram, main loop sequence
-  diagram for `add`, model class diagram, `edit` sequence diagram, and the export class
-  and sequence diagrams.
+- Wrote the Architecture, Main loop, Model component, Expense management and Export to
+  CSV sections ([PR #19](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/19),
+  [PR #60](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/60)), with the architecture,
+  main loop, model, `edit` and export diagrams.
 
 ### Contributions to team-based tasks
 
-- Set up the issue tracker: milestones `v1.0`, `v2.0` and `v2.0b`, `type.*` and
-  `priority.*` labels, and issues for every member's completed and planned work.
-- Before merging, checked each pull request for conflicts with the latest `master` and
-  ran the full test suite and the app on the merged result. When a conflict appeared,
-  wrote the exact steps for the author to resolve it.
+- Set up milestones, labels and issues, and managed the `v2.0` and `v2.1` releases.
+- Before each merge, ran the full tests and the app on the PR merged with the latest
+  `master`, and wrote resolution steps for the author when a conflict appeared.
 
 ### Review and mentoring contributions
 
-- Reviewed teammates' pull requests by running the merged code, not only reading the
-  diff. Found issues such as:
-  - split expenses not being saved, and `owe`/`settle` not reachable from the parser
-    ([PR #15](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/15));
-  - `split` no longer triggering the monthly budget warning after a refactor (PR #15);
-  - a trip budget with three decimal places being loaded and silently rounded
-    ([PR #20](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/20));
-  - a CLI regression fixture that would fail after another PR changed the `stats`
-    output ([PR #59](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/59)).
+- Reviewed PRs by running the merged code. Found split expenses not being saved and
+  `owe`/`settle` unreachable ([PR #15](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/15)),
+  a trip budget silently rounded on load ([PR #20](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/20))
+  and a test fixture broken by another PR ([PR #59](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/59)).
 - Other reviews: [PR #9](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/9),
   [PR #10](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/10),
   [PR #23](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/23),
-  [PR #57](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/57).
+  [PR #57](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/57),
+  [PR #68](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/68),
+  [PR #69](https://github.com/AY2627S1-CS2113-W10-1/tp/pull/69).
