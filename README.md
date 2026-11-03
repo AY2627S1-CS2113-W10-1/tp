@@ -24,8 +24,15 @@ Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recen
 
 1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
 1. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
-1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/tripjio/TripJio.java` file, right-click it, and choose `Run 'TripJio.main()'`. If the setup is correct, you should see the TripJio banner followed by:
+1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/tripjio/TripJio.java` file, right-click it, and choose `Run 'TripJio.main()'`. If the setup is correct, you should see something like the below:
    ```
+   ████████╗██████╗ ██╗██████╗     ██╗██╗ ██████╗
+   ╚══██╔══╝██╔══██╗██║██╔══██╗    ██║██║██╔═══██╗
+      ██║   ██████╔╝██║██████╔╝    ██║██║██║   ██║
+      ██║   ██╔══██╗██║██╔═══╝██   ██║██║██║   ██║
+      ██║   ██║  ██║██║██║    ╚█████╔╝██║╚██████╔╝
+      ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝     ╚════╝ ╚═╝ ╚═════╝
+   
    Hello! Welcome to TripJio, your travel budget buddy.
    What would you like to do?
    ```
