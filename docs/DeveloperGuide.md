@@ -184,6 +184,7 @@ reused code, assets or documentation.
 **Use of AI tools**
 
 - Tran Duc Thien used Claude (Anthropic) throughout the project to clarify programming syntax, troubleshoot compiler errors, suggest design improvements, refine wording in documentation, review written code, assist with repetitive coding tasks, verify diagrams, and identify bugs during testing before merging pull requests. All AI-generated suggestions and outputs were carefully reviewed, tested, and adapted before being incorporated into the project.
+- Jeanette Ong used Google Gemini throughout the project to assist with designing feature architectures for monthly budgets, forecasting, and trip summaries, refining documentation in the User Guide and Developer Guide, and resolving Git merge conflicts. All AI-generated code, tests, diagrams, and documentation were carefully reviewed, adapted, and verified through automated test suites and Checkstyle checks before being committed.
 
 ## Design & implementation
 
