@@ -1,36 +1,43 @@
 # TripJio
 
-This is a project template for a greenfield Java project. It's named after the Java mascot _Duke_. Given below are instructions on how to use it.
+TripJio is a command-line budget tracker and travel app for students. It records personal,
+shared and foreign-currency expenses, checks monthly and trip budgets, and reports spending
+by month, trip and category. All data is stored locally in a plain text file.
 
-## Setting up in Intellij
+Useful links:
 
-Prerequisites: JDK 25 (use the exact version), update Intellij to the most recent version.
+* [User Guide](https://ay2627s1-cs2113-w10-1.github.io/tp/UserGuide.html)
+* [Developer Guide](https://ay2627s1-cs2113-w10-1.github.io/tp/DeveloperGuide.html)
+* [About Us](https://ay2627s1-cs2113-w10-1.github.io/tp/AboutUs.html)
 
-1. **Ensure Intellij JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous Intellij project.
+## Running TripJio
+
+Prerequisites: JDK 25.
+
+1. Download the latest `tripjio.jar` from the [Releases](https://github.com/AY2627S1-CS2113-W10-1/tp/releases) page.
+1. Copy it into an empty folder, open a terminal there and run `java -jar tripjio.jar`.
+1. Type `help` to see all commands. Data is saved in `data/tripjio.txt` in the same folder.
+
+## Setting up in IntelliJ
+
+Prerequisites: JDK 25 (use the exact version), update IntelliJ to the most recent version.
+
+1. **Ensure IntelliJ JDK 25 is defined as an SDK**, as described [here](https://www.jetbrains.com/help/idea/sdk.html#set-up-jdk) -- this step is not needed if you have used JDK 25 in a previous IntelliJ project.
 1. **Import the project _as a Gradle project_**, as described [here](https://se-education.org/guides/tutorials/intellijImportGradleProject.html).
-1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/duke/Duke.java` file, right-click it, and choose `Run Duke.main()`. If the setup is correct, you should see something like the below:
+1. **Verify the setup**: After the importing is complete, locate the `src/main/java/seedu/tripjio/TripJio.java` file, right-click it, and choose `Run 'TripJio.main()'`. If the setup is correct, you should see the TripJio banner followed by:
    ```
-   > Task :compileJava
-   > Task :processResources NO-SOURCE
-   > Task :classes
-   
-   > Task :Duke.main()
-   Hello from
-    ____        _
-   |  _ \ _   _| | _____ 
-   | | | | | | | |/ / _ \
-   | |_| | |_| |   <  __/
-   |____/ \__,_|_|\_\___|
-   
-   What is your name?
+   Hello! Welcome to TripJio, your travel budget buddy.
+   What would you like to do?
    ```
-   Type some word and press enter to let the execution proceed to the end.
+   Type `exit` to quit.
 
 **Warning:** Keep the `src\main\java` folder as the root folder for Java files (i.e., don't rename those folders or move Java files to another folder outside of this folder path), as this is the default location some tools (e.g., Gradle) expect to find Java files.
 
 ## Build automation using Gradle
 
-* This project uses Gradle for build automation and dependency management. It includes a basic build script as well (i.e. the `build.gradle` file).
+* This project uses Gradle for build automation and dependency management (see `build.gradle`).
+* `./gradlew run` (`.\gradlew.bat run` on Windows) runs the app with assertions enabled.
+* `./gradlew shadowJar` builds the executable JAR at `build/libs/tripjio.jar`.
 * If you are new to Gradle, refer to the [Gradle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/gradle.html).
 
 ## Testing
@@ -44,26 +51,21 @@ Prerequisites: JDK 25 (use the exact version), update Intellij to the most recen
 
 ### JUnit tests
 
-* A skeleton JUnit test (`src/test/java/seedu/duke/DukeTest.java`) is provided with this project template. 
+* JUnit tests are in `src/test/java/seedu/tripjio`, mirroring the packages in `src/main/java`.
+* Run `./gradlew test` to run all of them.
 * If you are new to JUnit, refer to the [JUnit Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/junit.html).
 
 ## Checkstyle
 
-* A sample CheckStyle rule configuration is provided in this project.
+* The Checkstyle rules are in `config/checkstyle`. Run `./gradlew check` to run Checkstyle together with all tests.
 * If you are new to Checkstyle, refer to the [Checkstyle Tutorial at se-education.org/guides](https://se-education.org/guides/tutorials/checkstyle.html).
 
 ## CI using GitHub Actions
 
-The project uses [GitHub actions](https://github.com/features/actions) for CI. When you push a commit to this repo or PR against it, GitHub actions will run automatically to build and verify the code as updated by the commit/PR.
+The project uses [GitHub actions](https://github.com/features/actions) for CI. When you push a commit to this repo or PR against it, GitHub actions will run `./gradlew check` on Ubuntu, macOS and Windows.
 
 ## Documentation
 
-`/docs` folder contains a skeleton version of the project documentation.
-
-Steps for publishing documentation to the public: 
-1. If you are using this project template for an individual project, go your fork on GitHub.<br>
-   If you are using this project template for a team project, go to the team fork on GitHub.
-1. Click on the `settings` tab.
-1. Scroll down to the `GitHub Pages` section.
-1. Set the `source` as `master branch /docs folder`.
-1. Optionally, use the `choose a theme` button to choose a theme for your documentation.
+The `/docs` folder contains the User Guide, Developer Guide and team pages. They are published
+with GitHub Pages from the `master` branch `/docs` folder at
+<https://ay2627s1-cs2113-w10-1.github.io/tp/>.
