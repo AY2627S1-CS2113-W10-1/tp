@@ -185,6 +185,9 @@ reused code, assets or documentation.
 
 - Tran Duc Thien used Claude (Anthropic) throughout the project to clarify programming syntax, troubleshoot compiler errors, suggest design improvements, refine wording in documentation, review written code, assist with repetitive coding tasks, verify diagrams, and identify bugs during testing before merging pull requests. All AI-generated suggestions and outputs were carefully reviewed, tested, and adapted before being incorporated into the project.
 - Jeanette Ong used Google Gemini throughout the project to assist with designing feature architectures for monthly budgets, forecasting, and trip summaries, refining documentation in the User Guide and Developer Guide, and resolving Git merge conflicts. All AI-generated code, tests, diagrams, and documentation were carefully reviewed, adapted, and verified through automated test suites and Checkstyle checks before being committed.
+- Titus Chia used OpenAI Codex as an AI-assisted development tool during this project. Its use included explaining Java and object-oriented design concepts; drafting andrefining implementations for trip management, statistics, sorting and manual currency conversion; generating regression tests; and investigating bugs and integration issues. Codex also assisted with running tests and packaged-JAR checks, interpreting failures,
+and preparing fixes, including the save-failure exit handling and CSV text protection.
+
 
 ## Design & implementation
 
